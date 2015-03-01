@@ -1,0 +1,59 @@
+plugins {
+    id "com.jfrog.bintray" version "1.1"
+    id "com.github.jruby-gradle.base" version "0.1.5"
+    id "java"
+}
+import com.github.jrubygradle.JRubyExec
+repositories {
+    mavenCentral()
+    jcenter()
+}
+configurations {
+    provided
+}
+
+version = "0.1.0"
+
+dependencies {
+    compile  "org.embulk:embulk-core:0.4.10"
+    provided "org.embulk:embulk-core:0.4.10"
+
+    compile "com.google.http-client:google-http-client-jackson2:1.19.0"
+    compile ("com.google.apis:google-api-services-storage:v1-rev27-1.19.1") {exclude module: "guava-jdk5"}
+
+    testCompile "junit:junit:4.+"
+}
+
+task classpath(type: Copy, dependsOn: ["jar"]) {
+    doFirst { file("classpath").deleteDir() }
+    from (configurations.runtime - configurations.provided + files(jar.archivePath))
+    into "classpath"
+}
+clean { delete 'classpath' }
+
+task gem(type: JRubyExec, dependsOn: ["build", "gemspec", "classpath"]) {
+    jrubyArgs "-rrubygems/gem_runner", "-eGem::GemRunner.new.run(ARGV)", "build"
+    script "build/gemspec"
+    doLast { ant.move(file: "${project.name}-${project.version}.gem", todir: "pkg") }
+}
+
+task gemspec << { file("build/gemspec").write($/
+Gem::Specification.new do |spec|
+  spec.name          = "${project.name}"
+  spec.version       = "${project.version}"
+  spec.authors       = ["Satoshi Akama"]
+  spec.summary       = %[Google Cloud Storage input plugin for Embulk]
+  spec.description   = %[gcs input plugin is an Embulk plugin that loads records from Google Cloud Storage. read by any input plugins. Search the output plugins by 'embulk-output' keyword.]
+  spec.email         = ["satoshiakama@gmail.com"]
+  spec.licenses      = ["Apache-2.0"]
+  spec.homepage      = "https://github.com/sakama/embulk-input-gcs"
+
+  spec.files         = `git ls-files`.split("\n") + Dir["classpath/*.jar"]
+  spec.test_files    = spec.files.grep(%r"^(test|spec)/")
+  spec.require_paths = ["lib"]
+
+  spec.add_development_dependency 'bundler', ['~> 1.0']
+  spec.add_development_dependency 'rake', ['>= 10.0']
+end
+/$)
+}
