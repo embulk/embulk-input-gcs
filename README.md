@@ -37,7 +37,7 @@ embulk run /path/to/config.yml
 
 - **bucket** Google Cloud Storage bucket name (string, required)
 - **path_prefix** prefix of target keys (string, required)
-- **service_accound_email** Google Cloud Storage service_account_email (string, required)
+- **service_account_email** Google Cloud Storage service_account_email (string, required)
 - **p12_keyfile_fullpath** fullpath of p12 key (string, required)
 - **application_name** application name anything you like (string, optional)
 
@@ -48,7 +48,7 @@ in:
   type: gcs
   bucket: my-gcs-bucket
   path_prefix: logs/csv-
-  service_accound_email: ABCXYZ123ABCXYZ123.gserviceaccount.com
+  service_account_email: ABCXYZ123ABCXYZ123.gserviceaccount.com
   p12_keyfile_path: /path/to/p12_keyfile.p12
   application_name: Anything you like
 ```
@@ -60,7 +60,7 @@ in:
   type: gcs
   bucket: my-gcs-bucket
   path_prefix: sample_
-  service_accound_email: ABCXYZ123ABCXYZ123.gserviceaccount.com
+  service_account_email: ABCXYZ123ABCXYZ123.gserviceaccount.com
   p12_keyfile_path: /path/to/p12_keyfile.p12
   application_name: Anything you like
   decoders:

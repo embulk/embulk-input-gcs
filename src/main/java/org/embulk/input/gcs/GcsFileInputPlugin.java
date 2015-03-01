@@ -56,7 +56,7 @@ public class GcsFileInputPlugin
         @ConfigDefault("null")
         public Optional<String> getLastPath();
 
-        @Config("service_accound_email")
+        @Config("service_account_email")
         public String getServiceAccountEmail();
 
         @Config("application_name")
