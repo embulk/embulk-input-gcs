@@ -60,8 +60,7 @@ public class GcsFileInputPlugin
         public String getServiceAccountEmail();
 
         @Config("application_name")
-        // @todo I want to set default applicaiton name like "embulk-input-gcs". But string format cause JsonParseException.
-        @ConfigDefault("1000000000")
+        @ConfigDefault("\"Embulk GCS input plugin\"")
         public String getApplicationName();
 
         @Config("p12_keyfile_fullpath")
