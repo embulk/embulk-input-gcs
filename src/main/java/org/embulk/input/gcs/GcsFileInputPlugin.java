@@ -141,7 +141,7 @@ public class GcsFileInputPlugin
                     .build();
             return cred;
         } catch (IOException e) {
-            log.warn("Could not load client secrets file " + task.getP12KeyfileFullpath());
+            log.warn(String.format("Could not load client secrets file %s", task.getP12KeyfileFullpath()));
         } catch (GeneralSecurityException e) {
             log.warn ("Google Authentication was failed");
         }
@@ -204,7 +204,7 @@ public class GcsFileInputPlugin
                 Objects objects = listObjects.execute();
                 List<StorageObject> items = objects.getItems();
                 if (items == null) {
-                    log.info("No file was found in bucket:" + bucket + " prefix:" + prefix);
+                    log.info(String.format("No file was found in bucket:%s prefix:%s", bucket, prefix));
                     break;
                 }
                 for (StorageObject o : items) {
@@ -220,7 +220,7 @@ public class GcsFileInputPlugin
                 listObjects.setPageToken(lastKey);
             } while (lastKey != null);
         } catch (Exception e) {
-            log.warn("Could not get file list from bucket:" + bucket);
+            log.warn(String.format("Could not get file list from bucket:%s", bucket));
             log.warn(e.getMessage());
         }
 
