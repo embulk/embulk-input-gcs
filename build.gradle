@@ -12,11 +12,11 @@ configurations {
     provided
 }
 
-version = "0.1.1"
+version = "0.1.2"
 
 dependencies {
-    compile  "org.embulk:embulk-core:0.4.10"
-    provided "org.embulk:embulk-core:0.4.10"
+    compile  "org.embulk:embulk-core:0.5.1"
+    provided "org.embulk:embulk-core:0.5.1"
 
     compile "com.google.http-client:google-http-client-jackson2:1.19.0"
     compile ("com.google.apis:google-api-services-storage:v1-rev27-1.19.1") {exclude module: "guava-jdk5"}
