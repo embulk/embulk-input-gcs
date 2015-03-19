@@ -81,7 +81,7 @@ public class GcsFileInputPlugin
     public ConfigDiff transaction(ConfigSource config,
                                   FileInputPlugin.Control control)
     {
-        final PluginTask task = config.loadConfig(PluginTask.class);
+        PluginTask task = config.loadConfig(PluginTask.class);
 
         try {
             httpTransport = GoogleNetHttpTransport.newTrustedTransport();
@@ -101,7 +101,7 @@ public class GcsFileInputPlugin
                              int taskCount,
                              FileInputPlugin.Control control)
     {
-        final PluginTask task = taskSource.loadTask(PluginTask.class);
+        PluginTask task = taskSource.loadTask(PluginTask.class);
 
         control.run(taskSource, taskCount);
 
@@ -189,7 +189,7 @@ public class GcsFileInputPlugin
                 log.debug("bucket timeCreated: " + bk.getTimeCreated());
                 log.debug("bucket owner: " + bk.getOwner());
             }
-        } catch (Exception e) {
+        } catch (IOException e) {
             log.warn("Could not access to bucket:" + bucket);
             log.warn(e.getMessage());
         }
@@ -219,7 +219,7 @@ public class GcsFileInputPlugin
                 lastKey = objects.getNextPageToken();
                 listObjects.setPageToken(lastKey);
             } while (lastKey != null);
-        } catch (Exception e) {
+        } catch (IOException e) {
             log.warn(String.format("Could not get file list from bucket:%s", bucket));
             log.warn(e.getMessage());
         }
@@ -230,7 +230,7 @@ public class GcsFileInputPlugin
     @Override
     public TransactionalFileInput open(TaskSource taskSource, int taskIndex)
     {
-        final PluginTask task = taskSource.loadTask(PluginTask.class);
+        PluginTask task = taskSource.loadTask(PluginTask.class);
         return new GcsFileInput(task, taskIndex);
     }
 
