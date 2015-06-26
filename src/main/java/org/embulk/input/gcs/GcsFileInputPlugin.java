@@ -105,13 +105,20 @@ public class GcsFileInputPlugin
 
         control.run(taskSource, taskCount);
 
+        ConfigDiff configDiff = Exec.newConfigDiff();
+
         List<String> files = new ArrayList<String>(task.getFiles());
-        if (files.size() == 0) {
-            return null;
+        if (files.isEmpty()) {
+            // keep the last value if any
+            if (task.getLastPath().isPresent()) {
+                configDiff.set("last_path", task.getLastPath().get());
+            }
+        } else {
+            Collections.sort(files);
+            configDiff.set("last_path", files.get(files.size() - 1));
         }
-        Collections.sort(files);
-        return Exec.newConfigDiff().
-                set("last_path", files.get(files.size() - 1));
+
+        return configDiff;
     }
 
     @Override
