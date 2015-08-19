@@ -18,8 +18,8 @@ targetCompatibility = 1.7
 version = "0.1.4"
 
 dependencies {
-    compile  "org.embulk:embulk-core:0.5.1"
-    provided "org.embulk:embulk-core:0.5.1"
+    compile  "org.embulk:embulk-core:0.7.1"
+    provided "org.embulk:embulk-core:0.7.1"
 
     compile "com.google.http-client:google-http-client-jackson2:1.19.0"
     compile ("com.google.apis:google-api-services-storage:v1-rev27-1.19.1") {exclude module: "guava-jdk5"}
