@@ -47,30 +47,30 @@ public class GcsFileInputPlugin
             extends Task
     {
         @Config("bucket")
-        public String getBucket();
+        String getBucket();
 
         @Config("path_prefix")
-        public String getPathPrefix();
+        String getPathPrefix();
 
         @Config("last_path")
         @ConfigDefault("null")
-        public Optional<String> getLastPath();
+        Optional<String> getLastPath();
 
         @Config("service_account_email")
-        public String getServiceAccountEmail();
+        String getServiceAccountEmail();
 
         @Config("application_name")
         @ConfigDefault("\"Embulk GCS input plugin\"")
-        public String getApplicationName();
+        String getApplicationName();
 
         @Config("p12_keyfile_fullpath")
-        public String getP12KeyfileFullpath();
+        String getP12KeyfileFullpath();
 
-        public List<String> getFiles();
-        public void setFiles(List<String> files);
+        List<String> getFiles();
+        void setFiles(List<String> files);
 
         @ConfigInject
-        public BufferAllocator getBufferAllocator();
+        BufferAllocator getBufferAllocator();
     }
 
     private static final Logger log = Exec.getLogger(GcsFileInputPlugin.class);
