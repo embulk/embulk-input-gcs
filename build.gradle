@@ -15,7 +15,7 @@ configurations {
 sourceCompatibility = 1.7
 targetCompatibility = 1.7
 
-version = "0.1.4"
+version = "0.1.5"
 
 dependencies {
     compile  "org.embulk:embulk-core:0.7.1"
@@ -46,7 +46,7 @@ Gem::Specification.new do |spec|
   spec.version       = "${project.version}"
   spec.authors       = ["Satoshi Akama"]
   spec.summary       = %[Google Cloud Storage input plugin for Embulk]
-  spec.description   = %[gcs input plugin is an Embulk plugin that loads records from Google Cloud Storage. read by any input plugins. Search the output plugins by 'embulk-output' keyword.]
+  spec.description   = %[Reads files stored on Google Cloud Storage (Standard, Durable Reduced Availability or Nearline)]
   spec.email         = ["satoshiakama@gmail.com"]
   spec.licenses      = ["Apache-2.0"]
   spec.homepage      = "https://github.com/embulk/embulk-input-gcs"
