@@ -1,10 +1,8 @@
 package org.embulk.input.gcs;
 
 import java.util.List;
-import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
@@ -17,10 +15,10 @@ import org.embulk.config.Config;
 import org.embulk.config.ConfigInject;
 import org.embulk.config.ConfigDiff;
 import org.embulk.config.ConfigDefault;
+import org.embulk.config.ConfigException;
 import org.embulk.config.ConfigSource;
 import org.embulk.config.Task;
 import org.embulk.config.TaskSource;
-import org.embulk.config.TaskReport;
 import org.embulk.spi.Exec;
 import org.embulk.spi.BufferAllocator;
 import org.embulk.spi.FileInputPlugin;
@@ -29,13 +27,7 @@ import org.embulk.spi.util.InputStreamFileInput;
 
 import org.slf4j.Logger;
 
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
-import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
-import com.google.api.client.http.HttpTransport;
-import com.google.api.client.json.JsonFactory;
-import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.storage.Storage;
-import com.google.api.services.storage.StorageScopes;
 import com.google.api.services.storage.model.Bucket;
 import com.google.api.services.storage.model.Objects;
 import com.google.api.services.storage.model.StorageObject;
@@ -56,15 +48,21 @@ public class GcsFileInputPlugin
         @ConfigDefault("null")
         Optional<String> getLastPath();
 
+        @Config("auth_method")
+        @ConfigDefault("\"private_key\"")
+        AuthMethod getAuthMethod();
+
         @Config("service_account_email")
-        String getServiceAccountEmail();
+        @ConfigDefault("null")
+        Optional<String> getServiceAccountEmail();
 
         @Config("application_name")
         @ConfigDefault("\"Embulk GCS input plugin\"")
         String getApplicationName();
 
         @Config("p12_keyfile_fullpath")
-        String getP12KeyfileFullpath();
+        @ConfigDefault("null")
+        Optional<String> getP12KeyfileFullpath();
 
         List<String> getFiles();
         void setFiles(List<String> files);
@@ -74,21 +72,12 @@ public class GcsFileInputPlugin
     }
 
     private static final Logger log = Exec.getLogger(GcsFileInputPlugin.class);
-    private static HttpTransport httpTransport;
-    private static JsonFactory jsonFactory;
 
     @Override
     public ConfigDiff transaction(ConfigSource config,
                                   FileInputPlugin.Control control)
     {
         PluginTask task = config.loadConfig(PluginTask.class);
-
-        try {
-            httpTransport = GoogleNetHttpTransport.newTrustedTransport();
-            jsonFactory = new JacksonFactory();
-        } catch (Exception e) {
-            log.warn("Could not generate http transport");
-        }
 
         // list files recursively
         task.setFiles(listFiles(task));
@@ -128,39 +117,14 @@ public class GcsFileInputPlugin
     {
     }
 
-    /**
-     * @see https://developers.google.com/accounts/docs/OAuth2ServiceAccount#authorizingrequests
-     */
-    private static GoogleCredential getCredentialProvider (PluginTask task)
-    {
+    private static Storage newGcsClient(final PluginTask task) {
+        Storage client = null;
         try {
-            // @see https://cloud.google.com/compute/docs/api/how-tos/authorization
-            // @see https://developers.google.com/resources/api-libraries/documentation/storage/v1/java/latest/com/google/api/services/storage/STORAGE_SCOPE.html
-            GoogleCredential cred = new GoogleCredential.Builder().setTransport(httpTransport)
-                    .setJsonFactory(jsonFactory)
-                    .setServiceAccountId(task.getServiceAccountEmail())
-                    .setServiceAccountScopes(
-                            ImmutableList.of(
-                                    StorageScopes.DEVSTORAGE_READ_ONLY
-                            )
-                    )
-                    .setServiceAccountPrivateKeyFromP12File(new File(task.getP12KeyfileFullpath()))
-                    .build();
-            return cred;
-        } catch (IOException e) {
-            log.warn(String.format("Could not load client secrets file %s", task.getP12KeyfileFullpath()));
-        } catch (GeneralSecurityException e) {
-            log.warn ("Google Authentication was failed");
+            GcsAuthentication auth = new GcsAuthentication(task.getAuthMethod().getString(), task.getServiceAccountEmail(), task.getP12KeyfileFullpath(), task.getApplicationName());
+            client = auth.getGcsClient(task.getBucket());
+        } catch (GeneralSecurityException | IOException ex) {
+            throw new ConfigException(ex);
         }
-        return null;
-    }
-
-    private static Storage newGcsClient(PluginTask task)
-    {
-        GoogleCredential credentials = getCredentialProvider(task);
-        Storage client = new Storage.Builder(httpTransport, jsonFactory, credentials)
-                .setApplicationName(task.getApplicationName())
-                .build();
 
         return client;
     }
@@ -290,5 +254,23 @@ public class GcsFileInputPlugin
 
         @Override
         public void close() { }
+    }
+
+    public enum AuthMethod
+    {
+        private_key("private_key"),
+        compute_engine("compute_engine");
+
+        private final String string;
+
+        AuthMethod(String string)
+        {
+            this.string = string;
+        }
+
+        public String getString()
+        {
+            return string;
+        }
     }
 }
