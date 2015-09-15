@@ -42,7 +42,7 @@ embulk run /path/to/config.yml
 - **path_prefix** prefix of target keys (string, required)
 - **auth_method**  (string, optional, "private_key" or "compute_engine". default value is "private_key")
 - **service_account_email** Google Cloud Storage service_account_email (string, required)
-- **p12_keyfile_fullpath** fullpath of p12 key (string, required)
+- **p12_keyfile** fullpath of p12 key (string, required)
 - **application_name** application name anything you like (string, optional)
 
 ## Example
@@ -54,7 +54,7 @@ in:
   path_prefix: logs/csv-
   auth_method: private_key #default
   service_account_email: ABCXYZ123ABCXYZ123.gserviceaccount.com
-  p12_keyfile_path: /path/to/p12_keyfile.p12
+  p12_keyfile: /path/to/p12_keyfile.p12
   application_name: Anything you like
 ```
 
@@ -67,7 +67,7 @@ in:
   path_prefix: sample_
   auth_method: private_key #default
   service_account_email: ABCXYZ123ABCXYZ123.gserviceaccount.com
-  p12_keyfile_path: /path/to/p12_keyfile.p12
+  p12_keyfile: /path/to/p12_keyfile.p12
   application_name: Anything you like
   decoders:
   - {type: gzip}
