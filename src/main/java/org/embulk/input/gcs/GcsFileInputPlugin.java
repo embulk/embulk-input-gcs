@@ -6,8 +6,11 @@ import java.util.Collections;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.base.Optional;
+import com.google.common.base.Function;
+import com.google.common.base.Throwables;
 import java.security.GeneralSecurityException;
 
 import org.embulk.config.TaskReport;
@@ -23,6 +26,7 @@ import org.embulk.spi.Exec;
 import org.embulk.spi.BufferAllocator;
 import org.embulk.spi.FileInputPlugin;
 import org.embulk.spi.TransactionalFileInput;
+import org.embulk.spi.unit.LocalFile;
 import org.embulk.spi.util.InputStreamFileInput;
 
 import org.slf4j.Logger;
@@ -60,9 +64,15 @@ public class GcsFileInputPlugin
         @ConfigDefault("\"Embulk GCS input plugin\"")
         String getApplicationName();
 
+        // kept for backward compatibility
         @Config("p12_keyfile_fullpath")
         @ConfigDefault("null")
         Optional<String> getP12KeyfileFullpath();
+
+        @Config("p12_keyfile")
+        @ConfigDefault("null")
+        Optional<LocalFile> getP12Keyfile();
+        void setP12Keyfile(Optional<LocalFile> p12Keyfile);
 
         List<String> getFiles();
         void setFiles(List<String> files);
@@ -72,12 +82,35 @@ public class GcsFileInputPlugin
     }
 
     private static final Logger log = Exec.getLogger(GcsFileInputPlugin.class);
+    private static GcsAuthentication auth;
 
     @Override
     public ConfigDiff transaction(ConfigSource config,
                                   FileInputPlugin.Control control)
     {
         PluginTask task = config.loadConfig(PluginTask.class);
+
+        if (task.getP12KeyfileFullpath().isPresent()) {
+            if (task.getP12Keyfile().isPresent()) {
+                throw new ConfigException("Setting both p12_keyfile_fullpath and p12_keyfile is invalid");
+            }
+            try {
+                task.setP12Keyfile(Optional.of(LocalFile.of(task.getP12KeyfileFullpath().get())));
+            } catch (IOException ex) {
+                throw Throwables.propagate(ex);
+            }
+        }
+
+        try {
+            auth = new GcsAuthentication(
+                    task.getAuthMethod().getString(),
+                    task.getServiceAccountEmail(),
+                    task.getP12Keyfile().transform(localFileToPathString()),
+                    task.getApplicationName()
+            );
+        } catch (GeneralSecurityException | IOException ex) {
+            throw new ConfigException(ex);
+        }
 
         // list files recursively
         task.setFiles(listFiles(task));
@@ -117,16 +150,27 @@ public class GcsFileInputPlugin
     {
     }
 
-    private static Storage newGcsClient(final PluginTask task) {
+    private static Storage newGcsClient(final PluginTask task)
+    {
         Storage client = null;
         try {
-            GcsAuthentication auth = new GcsAuthentication(task.getAuthMethod().getString(), task.getServiceAccountEmail(), task.getP12KeyfileFullpath(), task.getApplicationName());
             client = auth.getGcsClient(task.getBucket());
-        } catch (GeneralSecurityException | IOException ex) {
+        } catch (IOException ex) {
             throw new ConfigException(ex);
         }
 
         return client;
+    }
+
+    private Function<LocalFile, String> localFileToPathString()
+    {
+        return new Function<LocalFile, String>()
+        {
+            public String apply(LocalFile file)
+            {
+                return file.getPath().toString();
+            }
+        };
     }
 
     public List<String> listFiles(PluginTask task)
