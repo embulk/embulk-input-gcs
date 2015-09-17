@@ -74,6 +74,10 @@ public class GcsFileInputPlugin
         Optional<LocalFile> getP12Keyfile();
         void setP12Keyfile(Optional<LocalFile> p12Keyfile);
 
+        @Config("json_keyfile")
+        @ConfigDefault("null")
+        Optional<LocalFile> getJsonKeyfile();
+
         List<String> getFiles();
         void setFiles(List<String> files);
 
@@ -101,11 +105,22 @@ public class GcsFileInputPlugin
             }
         }
 
+        if (task.getAuthMethod().getString().equals("json_key")) {
+            if (!task.getJsonKeyfile().isPresent()) {
+                throw new ConfigException("If auth_method is json_key, you have to set json_keyfile");
+            }
+        } else if (task.getAuthMethod().getString().equals("private_key")) {
+            if (!task.getP12Keyfile().isPresent() || !task.getServiceAccountEmail().isPresent()) {
+                throw new ConfigException("If auth_method is private_key, you have to set both service_account_email and p12_keyfile");
+            }
+        }
+
         try {
             auth = new GcsAuthentication(
                     task.getAuthMethod().getString(),
                     task.getServiceAccountEmail(),
                     task.getP12Keyfile().transform(localFileToPathString()),
+                    task.getJsonKeyfile().transform(localFileToPathString()),
                     task.getApplicationName()
             );
         } catch (GeneralSecurityException | IOException ex) {
@@ -303,7 +318,8 @@ public class GcsFileInputPlugin
     public enum AuthMethod
     {
         private_key("private_key"),
-        compute_engine("compute_engine");
+        compute_engine("compute_engine"),
+        json_key("json_key");
 
         private final String string;
 

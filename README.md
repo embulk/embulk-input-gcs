@@ -16,7 +16,7 @@ embulk gem install embulk-input-gcs
 
 ### Google Service Account Settings
 
-If you chose "private_key" as [auth_method](#Authentication), you can get service_account_email and private_key like below.
+If you chose "private_key" or "json_key" as [auth_method](#Authentication), you can get service_account_email and private_key or json_key like below.
 
 1. Make project at [Google Developers Console](https://console.developers.google.com/project).
 
@@ -26,9 +26,7 @@ If you chose "private_key" as [auth_method](#Authentication), you can get servic
 
     embulk-input-gcs can run "read-only" scopes.
 
-1. Generate private key in P12(PKCS12) format, and upload to machine.
-
-1. Write "EMAIL_ADDRESS" and fullpath of PKCS12 private key in yaml.
+1. Generate private key in P12(PKCS12) format or json_key, and upload to machine.
 
 ### run
 
@@ -40,9 +38,10 @@ embulk run /path/to/config.yml
 
 - **bucket** Google Cloud Storage bucket name (string, required)
 - **path_prefix** prefix of target keys (string, required)
-- **auth_method**  (string, optional, "private_key" or "compute_engine". default value is "private_key")
-- **service_account_email** Google Cloud Storage service_account_email (string, required)
-- **p12_keyfile** fullpath of p12 key (string, required)
+- **auth_method**  (string, optional, "private_key", "json_key" or "compute_engine". default value is "private_key")
+- **service_account_email** Google Cloud Storage service_account_email (string, required when auth_method is private_key)
+- **p12_keyfile** fullpath of p12 key (string, required when auth_method is private_key)
+- **json_keyfile** fullpath of json_key (string, required when auth_method is json_key)
 - **application_name** application name anything you like (string, optional)
 
 ## Example
@@ -91,16 +90,39 @@ out: {type: stdout}
 
 There are two methods supported to fetch access token for the service account.
 
-1. Public-Private key pair
-2. Pre-defined access token (Compute Engine only)
+1. Public-Private key pair of GCP(Google Cloud Platform)'s service account
+2. JSON key of GCP(Google Cloud Platform)'s service account
+3. Pre-defined access token (Google Compute Engine only)
 
-The examples above use the first one.  You first need to create a service account (client ID),
-download its private key and deploy the key with embulk.
+### Public-Private key pair of GCP's service account
+
+You first need to create a service account (client ID), download its private key and deploy the key with embulk.
+
+```yaml
+input:
+  type: gcs
+  auth_method: private_key
+  service_account_email: ABCXYZ123ABCXYZ123.gserviceaccount.com
+  p12_keyfile: /path/to/p12_keyfile.p12
+```
+
+### JSON key of GCP's service account
+
+You first need to create a service account (client ID), download its json key and deploy the key with embulk.
+
+```yaml
+input:
+  type: gcs
+  auth_method: json_key
+  json_keyfile: /path/to/json_keyfile.json
+```
+
+### Pre-defined access token(GCE only)
 
 On the other hand, you don't need to explicitly create a service account for embulk when you
-run embulk in Google Compute Engine. In this second authentication method, you need to
-add the API scope "https://www.googleapis.com/auth/devstorage.read_only" to the scope list of your
-Compute Engine instance, then you can configure embulk like this.
+run embulk in Google Compute Engine. In this third authentication method, you need to
+add the API scope "https://www.googleapis.com/auth/bigquery" to the scope list of your
+Compute Engine VM instance, then you can configure embulk like this.
 
 [Setting the scope of service account access for instances](https://cloud.google.com/compute/docs/authentication)
 
