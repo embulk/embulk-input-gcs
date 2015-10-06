@@ -88,7 +88,7 @@ out: {type: stdout}
 
 ## Authentication
 
-There are two methods supported to fetch access token for the service account.
+There are three methods supported to fetch access token for the service account.
 
 1. Public-Private key pair of GCP(Google Cloud Platform)'s service account
 2. JSON key of GCP(Google Cloud Platform)'s service account
@@ -99,7 +99,7 @@ There are two methods supported to fetch access token for the service account.
 You first need to create a service account (client ID), download its private key and deploy the key with embulk.
 
 ```yaml
-input:
+in:
   type: gcs
   auth_method: private_key
   service_account_email: ABCXYZ123ABCXYZ123.gserviceaccount.com
@@ -111,7 +111,7 @@ input:
 You first need to create a service account (client ID), download its json key and deploy the key with embulk.
 
 ```yaml
-input:
+in:
   type: gcs
   auth_method: json_key
   json_keyfile: /path/to/json_keyfile.json
@@ -127,7 +127,7 @@ Compute Engine VM instance, then you can configure embulk like this.
 [Setting the scope of service account access for instances](https://cloud.google.com/compute/docs/authentication)
 
 ```yaml
-input:
+in:
   type: gcs
   auth_method: compute_engine
 ```
