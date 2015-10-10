@@ -136,7 +136,7 @@ in:
 
 On the other hand, you don't need to explicitly create a service account for embulk when you
 run embulk in Google Compute Engine. In this third authentication method, you need to
-add the API scope "https://www.googleapis.com/auth/bigquery" to the scope list of your
+add the API scope "https://www.googleapis.com/auth/devstorage.read_only" to the scope list of your
 Compute Engine VM instance, then you can configure embulk like this.
 
 [Setting the scope of service account access for instances](https://cloud.google.com/compute/docs/authentication)
