@@ -2,6 +2,7 @@ plugins {
     id "com.jfrog.bintray" version "1.1"
     id "com.github.jruby-gradle.base" version "0.1.5"
     id "java"
+    id "jacoco"
 }
 import com.github.jrubygradle.JRubyExec
 repositories {
@@ -18,13 +19,15 @@ targetCompatibility = 1.7
 version = "0.1.7"
 
 dependencies {
-    compile  "org.embulk:embulk-core:0.7.1"
-    provided "org.embulk:embulk-core:0.7.1"
+    compile  "org.embulk:embulk-core:0.7.5"
+    provided "org.embulk:embulk-core:0.7.5"
 
     compile "com.google.http-client:google-http-client-jackson2:1.19.0"
     compile ("com.google.apis:google-api-services-storage:v1-rev27-1.19.1") {exclude module: "guava-jdk5"}
 
-    testCompile "junit:junit:4.+"
+    testCompile "junit:junit:4.12"
+    testCompile "org.embulk:embulk-core:0.7.5:tests"
+    testCompile "org.embulk:embulk-standards:0.7.5"
 }
 
 task classpath(type: Copy, dependsOn: ["jar"]) {
