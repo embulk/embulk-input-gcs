@@ -1,3 +1,7 @@
+Release 0.1.8 - 2015-10-29
+
+* Added unit tests
+
 Release 0.1.7 - 2015-10-06
 
 * Added new auth method - json_keyfile of GCP(Google Cloud Platform)'s service account
