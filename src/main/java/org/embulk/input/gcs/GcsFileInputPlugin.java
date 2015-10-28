@@ -165,7 +165,7 @@ public class GcsFileInputPlugin
     {
     }
 
-    private static Storage newGcsClient(final PluginTask task)
+    protected Storage newGcsClient(final PluginTask task)
     {
         Storage client = null;
         try {
@@ -213,12 +213,11 @@ public class GcsFileInputPlugin
             Storage.Buckets.Get getBucket = client.buckets().get(bucket);
             getBucket.setProjection("full");
             Bucket bk = getBucket.execute();
-            if (log.isDebugEnabled()) {
-                log.debug("bucket name: " + bucket);
-                log.debug("bucket location: " + bk.getLocation());
-                log.debug("bucket timeCreated: " + bk.getTimeCreated());
-                log.debug("bucket owner: " + bk.getOwner());
-            }
+
+            log.debug("bucket name: " + bucket);
+            log.debug("bucket location: " + bk.getLocation());
+            log.debug("bucket timeCreated: " + bk.getTimeCreated());
+            log.debug("bucket owner: " + bk.getOwner());
         } catch (IOException e) {
             log.warn("Could not access to bucket:" + bucket);
             log.warn(e.getMessage());
@@ -238,13 +237,11 @@ public class GcsFileInputPlugin
                     break;
                 }
                 for (StorageObject o : items) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("filename: " + o.getName());
-                        log.debug("updated: " + o.getUpdated());
-                    }
                     if (o.getSize().compareTo(BigInteger.ZERO) > 0) {
                         builder.add(o.getName());
                     }
+                    log.debug("filename: " + o.getName());
+                    log.debug("updated: " + o.getUpdated());
                 }
                 lastKey = objects.getNextPageToken();
                 listObjects.setPageToken(lastKey);
@@ -264,41 +261,10 @@ public class GcsFileInputPlugin
         return new GcsFileInput(task, taskIndex);
     }
 
-    public static class GcsFileInput
+    public class GcsFileInput
             extends InputStreamFileInput
             implements TransactionalFileInput
     {
-        private static class SingleFileProvider
-                implements InputStreamFileInput.Provider
-        {
-            private final Storage client;
-            private final String bucket;
-            private final String key;
-            private boolean opened = false;
-
-            public SingleFileProvider(PluginTask task, int taskIndex)
-            {
-                this.client = newGcsClient(task);
-                this.bucket = task.getBucket();
-                this.key = task.getFiles().get(taskIndex);
-            }
-
-            @Override
-            public InputStream openNext() throws IOException
-            {
-                if (opened) {
-                    return null;
-                }
-                opened = true;
-                Storage.Objects.Get getObject = client.objects().get(bucket, key);
-
-                return getObject.executeMediaAsInputStream();
-            }
-
-            @Override
-            public void close() { }
-        }
-
         public GcsFileInput(PluginTask task, int taskIndex)
         {
             super(task.getBufferAllocator(), new SingleFileProvider(task, taskIndex));
@@ -309,6 +275,37 @@ public class GcsFileInputPlugin
         public TaskReport commit()
         {
             return Exec.newTaskReport();
+        }
+
+        @Override
+        public void close() { }
+    }
+
+    private class SingleFileProvider
+            implements InputStreamFileInput.Provider
+    {
+        private final Storage client;
+        private final String bucket;
+        private final String key;
+        private boolean opened = false;
+
+        public SingleFileProvider(PluginTask task, int taskIndex)
+        {
+            this.client = newGcsClient(task);
+            this.bucket = task.getBucket();
+            this.key = task.getFiles().get(taskIndex);
+        }
+
+        @Override
+        public InputStream openNext() throws IOException
+        {
+            if (opened) {
+                return null;
+            }
+            opened = true;
+            Storage.Objects.Get getObject = client.objects().get(bucket, key);
+
+            return getObject.executeMediaAsInputStream();
         }
 
         @Override
