@@ -86,7 +86,6 @@ public class GcsFileInputPlugin
     }
 
     private static final Logger log = Exec.getLogger(GcsFileInputPlugin.class);
-    private static GcsAuthentication auth;
 
     @Override
     public ConfigDiff transaction(ConfigSource config,
@@ -115,8 +114,18 @@ public class GcsFileInputPlugin
             }
         }
 
+        Storage client = newGcsClient(task, newGcsAuth(task));
+
+        // list files recursively
+        task.setFiles(listFiles(task, client));
+        // number of processors is same with number of files
+        return resume(task.dump(), task.getFiles().size(), control);
+    }
+
+    private GcsAuthentication newGcsAuth(PluginTask task)
+    {
         try {
-            auth = new GcsAuthentication(
+            return new GcsAuthentication(
                     task.getAuthMethod().getString(),
                     task.getServiceAccountEmail(),
                     task.getP12Keyfile().transform(localFileToPathString()),
@@ -126,11 +135,6 @@ public class GcsFileInputPlugin
         } catch (GeneralSecurityException | IOException ex) {
             throw new ConfigException(ex);
         }
-
-        // list files recursively
-        task.setFiles(listFiles(task));
-        // number of processors is same with number of files
-        return resume(task.dump(), task.getFiles().size(), control);
     }
 
     @Override
@@ -165,7 +169,7 @@ public class GcsFileInputPlugin
     {
     }
 
-    protected Storage newGcsClient(final PluginTask task)
+    protected Storage newGcsClient(final PluginTask task, final GcsAuthentication auth)
     {
         Storage client = null;
         try {
@@ -188,9 +192,8 @@ public class GcsFileInputPlugin
         };
     }
 
-    public List<String> listFiles(PluginTask task)
+    public List<String> listFiles(PluginTask task, Storage client)
     {
-        Storage client = newGcsClient(task);
         String bucket = task.getBucket();
 
         return listGcsFilesByPrefix(client, bucket, task.getPathPrefix(), task.getLastPath());
@@ -291,7 +294,7 @@ public class GcsFileInputPlugin
 
         public SingleFileProvider(PluginTask task, int taskIndex)
         {
-            this.client = newGcsClient(task);
+            this.client = newGcsClient(task, newGcsAuth(task));
             this.bucket = task.getBucket();
             this.key = task.getFiles().get(taskIndex);
         }
