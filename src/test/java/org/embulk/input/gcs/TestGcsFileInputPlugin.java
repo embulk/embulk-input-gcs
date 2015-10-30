@@ -34,6 +34,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeNotNull;
+import java.lang.reflect.Method;
+import java.lang.reflect.InvocationTargetException;
 
 public class TestGcsFileInputPlugin
 {
@@ -153,16 +155,21 @@ public class TestGcsFileInputPlugin
 
     @Test
     public void testGcsClientCreateSuccessfully()
-            throws GeneralSecurityException, IOException, NoSuchFieldException
+            throws GeneralSecurityException, IOException, NoSuchMethodException,
+            IllegalAccessException, InvocationTargetException
     {
         PluginTask task = config().loadConfig(PluginTask.class);
         runner.transaction(config, new Control());
-        plugin.newGcsClient(task); // no errors happens
+
+        Method method = GcsFileInputPlugin.class.getDeclaredMethod("newGcsAuth", PluginTask.class);
+        method.setAccessible(true);
+        plugin.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task)); // no errors happens
     }
 
     @Test(expected = ConfigException.class)
     public void testGcsClientCreateThrowConfigException()
-            throws GeneralSecurityException, IOException, NoSuchFieldException
+            throws GeneralSecurityException, IOException, NoSuchMethodException,
+            IllegalAccessException, InvocationTargetException
     {
         ConfigSource config = Exec.newConfigSource()
                 .set("bucket", "non-exists-bucket")
@@ -173,7 +180,10 @@ public class TestGcsFileInputPlugin
 
         PluginTask task = config().loadConfig(PluginTask.class);
         runner.transaction(config, new Control());
-        plugin.newGcsClient(task);
+
+        Method method = GcsFileInputPlugin.class.getDeclaredMethod("newGcsAuth", PluginTask.class);
+        method.setAccessible(true);
+        plugin.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task));
     }
 
     @Test
@@ -201,6 +211,7 @@ public class TestGcsFileInputPlugin
 
     @Test
     public void testListFilesByPrefix()
+            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException
     {
         List<String> expected = Arrays.asList(
                 GCP_BUCKET_DIRECTORY + "sample_01.csv",
@@ -216,24 +227,30 @@ public class TestGcsFileInputPlugin
             }
         });
 
-        Storage client = plugin.newGcsClient(task);
+        Method method = GcsFileInputPlugin.class.getDeclaredMethod("newGcsAuth", PluginTask.class);
+        method.setAccessible(true);
+        Storage client = plugin.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task));
         List<String> actual = plugin.listGcsFilesByPrefix(client, GCP_BUCKET, GCP_PATH_PREFIX, Optional.<String>absent());
         assertEquals(expected, actual);
-
         assertEquals(GCP_BUCKET_DIRECTORY + "sample_02.csv", configDiff.get(String.class, "last_path"));
     }
 
     @Test
     public void testListFilesByPrefixNonExistsBucket()
+            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException
     {
         PluginTask task = config.loadConfig(PluginTask.class);
         runner.transaction(config, new Control());
-        Storage client = plugin.newGcsClient(task);
+
+        Method method = GcsFileInputPlugin.class.getDeclaredMethod("newGcsAuth", PluginTask.class);
+        method.setAccessible(true);
+        Storage client = plugin.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task));
         plugin.listGcsFilesByPrefix(client, "non-exists-bucket", "prefix", Optional.<String>absent()); // no errors happens
     }
 
     @Test
-    public void testGcsFileInputByOpen() throws IOException
+    public void testGcsFileInputByOpen()
+            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, IOException
     {
         ConfigSource config = Exec.newConfigSource()
                 .set("bucket", GCP_BUCKET)
@@ -245,7 +262,11 @@ public class TestGcsFileInputPlugin
 
         PluginTask task = config.loadConfig(PluginTask.class);
         runner.transaction(config, new Control());
-        task.setFiles(plugin.listFiles(task));
+
+        Method method = GcsFileInputPlugin.class.getDeclaredMethod("newGcsAuth", PluginTask.class);
+        method.setAccessible(true);
+        Storage client = plugin.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task));
+        task.setFiles(plugin.listFiles(task, client));
 
         assertRecords(config, output);
     }
