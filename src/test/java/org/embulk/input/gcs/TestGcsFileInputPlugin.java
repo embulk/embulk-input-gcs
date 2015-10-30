@@ -105,7 +105,8 @@ public class TestGcsFileInputPlugin
                 .set("path_prefix", "my-prefix")
                 .set("auth_method", "private_key")
                 .set("service_account_email", GCP_EMAIL)
-                .set("p12_keyfile", null);
+                .set("p12_keyfile", null)
+                .set("parser", parserConfig(schemaConfig()));
 
         runner.transaction(config, new Control());
     }
@@ -120,7 +121,8 @@ public class TestGcsFileInputPlugin
                 .set("auth_method", "private_key")
                 .set("service_account_email", GCP_EMAIL)
                 .set("p12_keyfile", GCP_P12_KEYFILE)
-                .set("p12_keyfile_fullpath", GCP_P12_KEYFILE);
+                .set("p12_keyfile_fullpath", GCP_P12_KEYFILE)
+                .set("parser", parserConfig(schemaConfig()));
 
         runner.transaction(config, new Control());
     }
@@ -134,7 +136,8 @@ public class TestGcsFileInputPlugin
                 .set("path_prefix", "my-prefix")
                 .set("auth_method", "private_key")
                 .set("service_account_email", GCP_EMAIL)
-                .set("p12_keyfile", "invalid-key.p12");
+                .set("p12_keyfile", "invalid-key.p12")
+                .set("parser", parserConfig(schemaConfig()));
 
         runner.transaction(config, new Control());
     }
@@ -148,7 +151,8 @@ public class TestGcsFileInputPlugin
                 .set("path_prefix", "my-prefix")
                 .set("auth_method", "json_key")
                 .set("service_account_email", GCP_EMAIL)
-                .set("json_keyfile", null);
+                .set("json_keyfile", null)
+                .set("parser", parserConfig(schemaConfig()));
 
         runner.transaction(config, new Control());
     }
@@ -176,7 +180,8 @@ public class TestGcsFileInputPlugin
                 .set("path_prefix", "my-prefix")
                 .set("auth_method", "json_key")
                 .set("service_account_email", GCP_EMAIL)
-                .set("json_keyfile", GCP_JSON_KEYFILE);
+                .set("json_keyfile", GCP_JSON_KEYFILE)
+                .set("parser", parserConfig(schemaConfig()));
 
         PluginTask task = config().loadConfig(PluginTask.class);
         runner.transaction(config, new Control());
