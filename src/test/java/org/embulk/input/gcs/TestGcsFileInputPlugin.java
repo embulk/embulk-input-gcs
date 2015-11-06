@@ -157,6 +157,22 @@ public class TestGcsFileInputPlugin
         runner.transaction(config, new Control());
     }
 
+    // last_path length is too long
+    @Test(expected = ConfigException.class)
+    public void checkDefaultValuesLongLastPath()
+    {
+        ConfigSource config = Exec.newConfigSource()
+                .set("bucket", GCP_BUCKET)
+                .set("path_prefix", "my-prefix")
+                .set("auth_method", "json_key")
+                .set("service_account_email", GCP_EMAIL)
+                .set("json_keyfile", null)
+                .set("last_path", "ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc128")
+                .set("parser", parserConfig(schemaConfig()));
+
+        runner.transaction(config, new Control());
+    }
+
     @Test
     public void testGcsClientCreateSuccessfully()
             throws GeneralSecurityException, IOException, NoSuchMethodException,
@@ -274,6 +290,22 @@ public class TestGcsFileInputPlugin
         task.setFiles(plugin.listFiles(task, client));
 
         assertRecords(config, output);
+    }
+
+    @Test
+    public void testBase64()
+            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException
+    {
+        Method method = GcsFileInputPlugin.class.getDeclaredMethod("base64", String.class);
+        method.setAccessible(true);
+
+        assertEquals("CgFj", method.invoke(plugin, "c"));
+        assertEquals("CgJjMg==", method.invoke(plugin, "c2"));
+        assertEquals("Cgh0ZXN0LmNzdg==", method.invoke(plugin, "test.csv"));
+        assertEquals("ChZnY3MtdGVzdC9zYW1wbGVfMDEuY3N2", method.invoke(plugin, "gcs-test/sample_01.csv"));
+        String params = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc127";
+        String expected = "Cn9jY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjMTI3";
+        assertEquals(expected, method.invoke(plugin, params));
     }
 
     public ConfigSource config()
