@@ -11,6 +11,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.base.Optional;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
+import com.google.common.base.Charsets;
+import com.google.common.io.BaseEncoding;
 import java.security.GeneralSecurityException;
 
 import org.embulk.config.TaskReport;
@@ -114,6 +116,13 @@ public class GcsFileInputPlugin
             }
         }
 
+        // @see https://cloud.google.com/storage/docs/bucket-naming
+        if (task.getLastPath().isPresent()) {
+            if (task.getLastPath().get().length() >= 128) {
+                throw new ConfigException("last_path length is allowed between 1 and 1024 bytes");
+            }
+        }
+
         Storage client = newGcsClient(task, newGcsAuth(task));
 
         // list files recursively
@@ -209,7 +218,7 @@ public class GcsFileInputPlugin
     {
         ImmutableList.Builder<String> builder = ImmutableList.builder();
 
-        String lastKey = lastPath.orNull();
+        String lastKey = lastPath.isPresent() ? base64(lastPath.get()) : null;
 
         // @see https://cloud.google.com/storage/docs/json_api/v1/objects#resource
         try {
@@ -314,6 +323,23 @@ public class GcsFileInputPlugin
         @Override
         public void close() { }
     }
+
+    private static String base64(String path)
+    {
+        byte[] encoding;
+        byte[] utf8 = path.getBytes(Charsets.UTF_8);
+        log.debug(String.format("path string: %s ,path length:%s \" + ", path, utf8.length));
+
+        encoding = new byte[utf8.length + 2];
+        encoding[0] = 0x0a;
+        encoding[1] = new Byte(String.valueOf(path.length()));
+        System.arraycopy(utf8, 0, encoding, 2, utf8.length);
+
+        String s = BaseEncoding.base64().encode(encoding);
+        log.debug(String.format("last_path(base64 encoded): %s" ,s));
+        return s;
+    }
+
 
     public enum AuthMethod
     {
