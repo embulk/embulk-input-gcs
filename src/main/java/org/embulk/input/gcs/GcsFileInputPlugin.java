@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
 
+import com.google.api.client.http.HttpResponseException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.base.Optional;
 import com.google.common.base.Function;
@@ -250,6 +251,10 @@ public class GcsFileInputPlugin
                 listObjects.setPageToken(lastKey);
             } while (lastKey != null);
         } catch (IOException e) {
+            if ((e instanceof HttpResponseException) && ((HttpResponseException) e).getStatusCode() == 400) {
+                throw new ConfigException(String.format("Files listing failed: bucket:%s, prefix:%s, last_path:%s", bucket, prefix, lastKey), e);
+            }
+
             log.warn(String.format("Could not get file list from bucket:%s", bucket));
             log.warn(e.getMessage());
         }
