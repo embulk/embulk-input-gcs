@@ -1,6 +1,11 @@
+Release 0.1.10 - 2015-11-07
+
+* Fix resume download logics
+* Throw ConfigException when files listing failed. @muga thanks!
+
 Release 0.1.9 - 2015-10-30
 
-Fix GcsAuthentication object initialization for mapreduce executor. @muga thanks!
+* Fix GcsAuthentication object initialization for mapreduce executor. @muga thanks!
 
 Release 0.1.8 - 2015-10-29
 
