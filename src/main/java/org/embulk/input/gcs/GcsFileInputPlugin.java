@@ -219,7 +219,7 @@ public class GcsFileInputPlugin
     {
         ImmutableList.Builder<String> builder = ImmutableList.builder();
 
-        String lastKey = lastPath.isPresent() ? base64(lastPath.get()) : null;
+        String lastKey = lastPath.isPresent() ? base64Encode(lastPath.get()) : null;
 
         // @see https://cloud.google.com/storage/docs/json_api/v1/objects#resource
         try {
@@ -329,7 +329,8 @@ public class GcsFileInputPlugin
         public void close() { }
     }
 
-    private static String base64(String path)
+    // String nextToken = base64Encode(0x0a + 0x01~0x27 + filePath);
+    private static String base64Encode(String path)
     {
         byte[] encoding;
         byte[] utf8 = path.getBytes(Charsets.UTF_8);

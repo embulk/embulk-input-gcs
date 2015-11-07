@@ -296,7 +296,7 @@ public class TestGcsFileInputPlugin
     public void testBase64()
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException
     {
-        Method method = GcsFileInputPlugin.class.getDeclaredMethod("base64", String.class);
+        Method method = GcsFileInputPlugin.class.getDeclaredMethod("base64Encode", String.class);
         method.setAccessible(true);
 
         assertEquals("CgFj", method.invoke(plugin, "c"));
