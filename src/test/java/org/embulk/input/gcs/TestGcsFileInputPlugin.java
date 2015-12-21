@@ -7,6 +7,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 
@@ -199,7 +202,7 @@ public class TestGcsFileInputPlugin
                 .set("json_keyfile", GCP_JSON_KEYFILE)
                 .set("parser", parserConfig(schemaConfig()));
 
-        PluginTask task = config().loadConfig(PluginTask.class);
+        PluginTask task = config.loadConfig(PluginTask.class);
         runner.transaction(config, new Control());
 
         Method method = GcsFileInputPlugin.class.getDeclaredMethod("newGcsAuth", PluginTask.class);
@@ -290,6 +293,34 @@ public class TestGcsFileInputPlugin
         task.setFiles(plugin.listFiles(task, client));
 
         assertRecords(config, output);
+    }
+
+    @Test
+    public void testGcsFileInputByReopen()
+            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, IOException
+    {
+        ConfigSource config = Exec.newConfigSource()
+                .set("bucket", GCP_BUCKET)
+                .set("path_prefix", GCP_PATH_PREFIX)
+                .set("auth_method", "json_key")
+                .set("service_account_email", GCP_EMAIL)
+                .set("json_keyfile", GCP_JSON_KEYFILE)
+                .set("parser", parserConfig(schemaConfig()));
+
+        PluginTask task = config.loadConfig(PluginTask.class);
+        runner.transaction(config, new Control());
+
+        Method method = GcsFileInputPlugin.class.getDeclaredMethod("newGcsAuth", PluginTask.class);
+        method.setAccessible(true);
+        Storage client = plugin.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task));
+        task.setFiles(plugin.listFiles(task, client));
+
+        String key = GCP_BUCKET_DIRECTORY + "sample_01.csv";
+        GcsFileInputPlugin.GcsInputStreamReopener opener = new GcsFileInputPlugin.GcsInputStreamReopener(client, GCP_BUCKET, key);
+        try (InputStream in = opener.reopen(0, new RuntimeException())) {
+            BufferedReader r = new BufferedReader(new InputStreamReader(in));
+            assertEquals("id,account,time,purchase,comment", r.readLine());
+        }
     }
 
     @Test
