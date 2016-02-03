@@ -62,12 +62,18 @@ public class TestGcsFileInputPlugin
     @BeforeClass
     public static void initializeConstant()
     {
-        GCP_EMAIL = Optional.of(System.getenv("GCP_EMAIL"));
-        GCP_P12_KEYFILE = Optional.of(System.getenv("GCP_P12_KEYFILE"));
-        GCP_JSON_KEYFILE = Optional.of(System.getenv("GCP_JSON_KEYFILE"));
-        GCP_BUCKET = System.getenv("GCP_BUCKET");
+        String gcpEmail = System.getenv("GCP_EMAIL");
+        String gcpP12KeyFile = System.getenv("GCP_P12_KEYFILE");
+        String gcpJsonKeyFile = System.getenv("GCP_JSON_KEYFILE");
+        String gcpBucket = System.getenv("GCP_BUCKET");
+
         // skip test cases, if environment variables are not set.
-        assumeNotNull(GCP_EMAIL, GCP_P12_KEYFILE, GCP_JSON_KEYFILE, GCP_BUCKET);
+        assumeNotNull(gcpEmail, gcpP12KeyFile, gcpJsonKeyFile, gcpBucket);
+
+        GCP_EMAIL = Optional.of(gcpEmail);
+        GCP_P12_KEYFILE = Optional.of(gcpP12KeyFile);
+        GCP_JSON_KEYFILE = Optional.of(gcpJsonKeyFile);
+        GCP_BUCKET = gcpBucket;
 
         GCP_BUCKET_DIRECTORY = System.getenv("GCP_BUCKET_DIRECTORY") != null ? getDirectory(System.getenv("GCP_BUCKET_DIRECTORY")) : getDirectory("");
         GCP_PATH_PREFIX = GCP_BUCKET_DIRECTORY + "sample_";
