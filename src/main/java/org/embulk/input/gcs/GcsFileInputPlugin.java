@@ -1,49 +1,46 @@
 package org.embulk.input.gcs;
 
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.io.InputStream;
-import java.math.BigInteger;
-
 import com.google.api.client.http.HttpResponseException;
-import com.google.common.collect.ImmutableList;
-import com.google.common.base.Optional;
-import com.google.common.base.Function;
-import com.google.common.base.Throwables;
-import com.google.common.base.Charsets;
-import com.google.common.io.BaseEncoding;
+import com.google.api.services.storage.Storage;
+import com.google.api.services.storage.model.Bucket;
+import com.google.api.services.storage.model.Objects;
+import com.google.api.services.storage.model.StorageObject;
 import com.google.common.annotations.VisibleForTesting;
-import java.security.GeneralSecurityException;
-
-import org.embulk.config.TaskReport;
+import com.google.common.base.Charsets;
+import com.google.common.base.Function;
+import com.google.common.base.Optional;
+import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
+import com.google.common.io.BaseEncoding;
 import org.embulk.config.Config;
-import org.embulk.config.ConfigInject;
-import org.embulk.config.ConfigDiff;
 import org.embulk.config.ConfigDefault;
+import org.embulk.config.ConfigDiff;
 import org.embulk.config.ConfigException;
+import org.embulk.config.ConfigInject;
 import org.embulk.config.ConfigSource;
 import org.embulk.config.Task;
+import org.embulk.config.TaskReport;
 import org.embulk.config.TaskSource;
-import org.embulk.spi.Exec;
 import org.embulk.spi.BufferAllocator;
+import org.embulk.spi.Exec;
 import org.embulk.spi.FileInputPlugin;
 import org.embulk.spi.TransactionalFileInput;
 import org.embulk.spi.unit.LocalFile;
 import org.embulk.spi.util.InputStreamFileInput;
 import org.embulk.spi.util.ResumableInputStream;
-import org.embulk.spi.util.RetryExecutor.Retryable;
 import org.embulk.spi.util.RetryExecutor.RetryGiveupException;
+import org.embulk.spi.util.RetryExecutor.Retryable;
+import org.slf4j.Logger;
 import static org.embulk.spi.util.RetryExecutor.retryExecutor;
 
-import org.slf4j.Logger;
-
-import com.google.api.services.storage.Storage;
-import com.google.api.services.storage.model.Bucket;
-import com.google.api.services.storage.model.Objects;
-import com.google.api.services.storage.model.StorageObject;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InterruptedIOException;
+import java.math.BigInteger;
+import java.security.GeneralSecurityException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public class GcsFileInputPlugin
         implements FileInputPlugin
@@ -108,7 +105,8 @@ public class GcsFileInputPlugin
             }
             try {
                 task.setP12Keyfile(Optional.of(LocalFile.of(task.getP12KeyfileFullpath().get())));
-            } catch (IOException ex) {
+            }
+            catch (IOException ex) {
                 throw Throwables.propagate(ex);
             }
         }
@@ -117,7 +115,8 @@ public class GcsFileInputPlugin
             if (!task.getJsonKeyfile().isPresent()) {
                 throw new ConfigException("If auth_method is json_key, you have to set json_keyfile");
             }
-        } else if (task.getAuthMethod().getString().equals("private_key")) {
+        }
+        else if (task.getAuthMethod().getString().equals("private_key")) {
             if (!task.getP12Keyfile().isPresent() || !task.getServiceAccountEmail().isPresent()) {
                 throw new ConfigException("If auth_method is private_key, you have to set both service_account_email and p12_keyfile");
             }
@@ -148,7 +147,8 @@ public class GcsFileInputPlugin
                     task.getJsonKeyfile().transform(localFileToPathString()),
                     task.getApplicationName()
             );
-        } catch (GeneralSecurityException | IOException ex) {
+        }
+        catch (GeneralSecurityException | IOException ex) {
             throw new ConfigException(ex);
         }
     }
@@ -170,7 +170,8 @@ public class GcsFileInputPlugin
             if (task.getLastPath().isPresent()) {
                 configDiff.set("last_path", task.getLastPath().get());
             }
-        } else {
+        }
+        else {
             Collections.sort(files);
             configDiff.set("last_path", files.get(files.size() - 1));
         }
@@ -190,7 +191,8 @@ public class GcsFileInputPlugin
         Storage client = null;
         try {
             client = auth.getGcsClient(task.getBucket());
-        } catch (IOException ex) {
+        }
+        catch (IOException ex) {
             throw new ConfigException(ex);
         }
 
@@ -237,11 +239,11 @@ public class GcsFileInputPlugin
             log.debug("bucket location: " + bk.getLocation());
             log.debug("bucket timeCreated: " + bk.getTimeCreated());
             log.debug("bucket owner: " + bk.getOwner());
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             log.warn("Could not access to bucket:" + bucket);
             log.warn(e.getMessage());
         }
-
 
         try {
             // @see https://cloud.google.com/storage/docs/json_api/v1/objects/list
@@ -265,7 +267,8 @@ public class GcsFileInputPlugin
                 lastKey = objects.getNextPageToken();
                 listObjects.setPageToken(lastKey);
             } while (lastKey != null);
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             if ((e instanceof HttpResponseException) && ((HttpResponseException) e).getStatusCode() == 400) {
                 throw new ConfigException(String.format("Files listing failed: bucket:%s, prefix:%s, last_path:%s", bucket, prefix, lastKey), e);
             }
@@ -328,10 +331,11 @@ public class GcsFileInputPlugin
                                 throws RetryGiveupException
                         {
                             String message = String.format("GCS GET request failed. Retrying %d/%d after %d seconds. Message: %s",
-                                    retryCount, retryLimit, retryWait/1000, exception.getMessage());
+                                    retryCount, retryLimit, retryWait / 1000, exception.getMessage());
                             if (retryCount % 3 == 0) {
                                 log.warn(message, exception);
-                            } else {
+                            }
+                            else {
                                 log.warn(message);
                             }
                         }
@@ -342,10 +346,12 @@ public class GcsFileInputPlugin
                         {
                         }
                     });
-            } catch (RetryGiveupException ex) {
+            }
+            catch (RetryGiveupException ex) {
                 Throwables.propagateIfInstanceOf(ex.getCause(), IOException.class);
                 throw Throwables.propagate(ex.getCause());
-            } catch (InterruptedException ex) {
+            }
+            catch (InterruptedException ex) {
                 throw new InterruptedIOException();
             }
         }
@@ -360,7 +366,9 @@ public class GcsFileInputPlugin
             super(task.getBufferAllocator(), new SingleFileProvider(task, taskIndex));
         }
 
-        public void abort() { }
+        public void abort()
+        {
+        }
 
         public TaskReport commit()
         {
@@ -368,7 +376,9 @@ public class GcsFileInputPlugin
         }
 
         @Override
-        public void close() { }
+        public void close()
+        {
+        }
     }
 
     private class SingleFileProvider
@@ -399,7 +409,9 @@ public class GcsFileInputPlugin
         }
 
         @Override
-        public void close() { }
+        public void close()
+        {
+        }
     }
 
     // String nextToken = base64Encode(0x0a + 0x01~0x27 + filePath);
@@ -415,10 +427,9 @@ public class GcsFileInputPlugin
         System.arraycopy(utf8, 0, encoding, 2, utf8.length);
 
         String s = BaseEncoding.base64().encode(encoding);
-        log.debug(String.format("last_path(base64 encoded): %s" ,s));
+        log.debug(String.format("last_path(base64 encoded): %s", s));
         return s;
     }
-
 
     public enum AuthMethod
     {
