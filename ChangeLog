@@ -1,4 +1,11 @@
+Release 0.1.13 - 2016-02-04
+* Upgraded embulk to v0.8.2
+* Updated Google HTTP Client Library from 1.19.0 to 2.1.21.0
+* Updated Google Cloud Storage API Client Library from v1-rev27-1.19.1 to v1-rev59-1.21.0
+
 Release 0.1.11 - 2016-01-25
+* Added retry logic
+
 * Added retry logic
 
 Release 0.1.10 - 2015-11-07
