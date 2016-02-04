@@ -1,44 +1,46 @@
 package org.embulk.input.gcs;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import com.google.common.collect.ImmutableMap;
+import com.google.api.services.storage.Storage;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.IOException;
-import java.security.GeneralSecurityException;
-
 import org.embulk.EmbulkTestRuntime;
+import org.embulk.config.ConfigDiff;
+import org.embulk.config.ConfigException;
+import org.embulk.config.ConfigSource;
 import org.embulk.config.TaskReport;
 import org.embulk.config.TaskSource;
-import org.embulk.config.ConfigDiff;
-import org.embulk.config.ConfigSource;
-import org.embulk.config.ConfigException;
+import org.embulk.input.gcs.GcsFileInputPlugin.PluginTask;
 import org.embulk.spi.Exec;
 import org.embulk.spi.FileInputPlugin;
 import org.embulk.spi.FileInputRunner;
 import org.embulk.spi.InputPlugin;
-import org.embulk.spi.util.Pages;
 import org.embulk.spi.Schema;
 import org.embulk.spi.TestPageBuilderReader.MockPageOutput;
-import org.embulk.input.gcs.GcsFileInputPlugin.PluginTask;
+import org.embulk.spi.util.Pages;
 import org.embulk.standards.CsvParserPlugin;
-
-import com.google.api.services.storage.Storage;
-
-import org.junit.BeforeClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
+
+import java.io.BufferedReader;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.security.GeneralSecurityException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeNotNull;
-import java.lang.reflect.Method;
+
 import java.lang.reflect.InvocationTargetException;
+
+import java.lang.reflect.Method;
 
 public class TestGcsFileInputPlugin
 {
@@ -48,7 +50,7 @@ public class TestGcsFileInputPlugin
     private static String GCP_BUCKET;
     private static String GCP_BUCKET_DIRECTORY;
     private static String GCP_PATH_PREFIX;
-    private final String GCP_APPLICATION_NAME = "embulk-input-gcs";
+    private static String GCP_APPLICATION_NAME;
     private FileInputRunner runner;
     private MockPageOutput output;
 
@@ -251,7 +253,8 @@ public class TestGcsFileInputPlugin
         PluginTask task = config.loadConfig(PluginTask.class);
         ConfigDiff configDiff = plugin.transaction(config, new FileInputPlugin.Control() {
             @Override
-            public List<TaskReport> run(TaskSource taskSource, int taskCount) {
+            public List<TaskReport> run(TaskSource taskSource, int taskCount)
+            {
                 assertEquals(2, taskCount);
                 return emptyTaskReports(taskCount);
             }
