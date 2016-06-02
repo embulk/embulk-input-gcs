@@ -114,7 +114,7 @@ public class TestGcsFileInputPlugin
     {
         ConfigSource config = Exec.newConfigSource()
                 .set("bucket", GCP_BUCKET)
-                .set("paths", "{\"object1\",\"object2\"}")
+                .set("paths", Arrays.asList("object1", "object2"))
                 .set("auth_method", "private_key")
                 .set("service_account_email", GCP_EMAIL)
                 .set("p12_keyfile", GCP_P12_KEYFILE)
