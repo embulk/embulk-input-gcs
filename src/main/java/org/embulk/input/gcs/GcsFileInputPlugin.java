@@ -52,7 +52,8 @@ public class GcsFileInputPlugin
         String getBucket();
 
         @Config("path_prefix")
-        String getPathPrefix();
+        @ConfigDefault("null")
+        Optional<String> getPathPrefix();
 
         @Config("last_path")
         @ConfigDefault("null")
@@ -84,6 +85,8 @@ public class GcsFileInputPlugin
         @ConfigDefault("null")
         Optional<LocalFile> getJsonKeyfile();
 
+        @Config("paths")
+        @ConfigDefault("[]")
         List<String> getFiles();
         void setFiles(List<String> files);
 
@@ -131,8 +134,13 @@ public class GcsFileInputPlugin
 
         Storage client = newGcsClient(task, newGcsAuth(task));
 
-        // list files recursively
-        task.setFiles(listFiles(task, client));
+        // list files recursively if path_prefix is specified
+        if (task.getPathPrefix().isPresent()) {
+            task.setFiles(listFiles(task, client));
+        }
+        if (task.getFiles().isEmpty()) {
+            throw new ConfigException("No file is found. Fix path_prefix or specify paths directly");
+        }
         // number of processors is same with number of files
         return resume(task.dump(), task.getFiles().size(), control);
     }
@@ -214,7 +222,7 @@ public class GcsFileInputPlugin
     {
         String bucket = task.getBucket();
 
-        return listGcsFilesByPrefix(client, bucket, task.getPathPrefix(), task.getLastPath());
+        return listGcsFilesByPrefix(client, bucket, task.getPathPrefix().get(), task.getLastPath());
     }
 
     /**

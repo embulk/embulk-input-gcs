@@ -37,7 +37,8 @@ embulk run /path/to/config.yml
 ## Configuration
 
 - **bucket** Google Cloud Storage bucket name (string, required)
-- **path_prefix** prefix of target keys (string, required)
+- **path_prefix** prefix of target keys (string, either of "path_prefix" or "paths" is required)
+- **paths** list of target keys (array of string, either of "path_prefix" or "paths" is required)
 - **auth_method**  (string, optional, "private_key", "json_key" or "compute_engine". default value is "private_key")
 - **service_account_email** Google Cloud Storage service_account_email (string, required when auth_method is private_key)
 - **p12_keyfile** fullpath of p12 key (string, required when auth_method is private_key)
@@ -146,6 +147,13 @@ in:
   type: gcs
   auth_method: compute_engine
 ```
+
+## Eventually Consistency
+
+An operation listing objects is eventually consistent although getting objects is strongly consistent, see https://cloud.google.com/storage/docs/consistency.
+
+`path_prefix` uses the objects list API, therefore it would miss some of objects.
+If you want to avoid such situations, you should use `paths` option which directly specifies object paths without the objects list API.
 
 ## Build
 
