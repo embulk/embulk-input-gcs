@@ -36,6 +36,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assume.assumeNotNull;
 
 import java.lang.reflect.InvocationTargetException;
@@ -105,6 +106,38 @@ public class TestGcsFileInputPlugin
         GcsFileInputPlugin.PluginTask task = config.loadConfig(PluginTask.class);
         assertEquals("private_key", task.getAuthMethod().toString());
         assertEquals("Embulk GCS input plugin", task.getApplicationName());
+    }
+
+    // paths are set
+    @Test
+    public void checkDefaultValuesPathsSpecified()
+    {
+        ConfigSource config = Exec.newConfigSource()
+                .set("bucket", GCP_BUCKET)
+                .set("paths", "{\"object1\",\"object2\"}")
+                .set("auth_method", "private_key")
+                .set("service_account_email", GCP_EMAIL)
+                .set("p12_keyfile", GCP_P12_KEYFILE)
+                .set("p12_keyfile_fullpath", GCP_P12_KEYFILE)
+                .set("parser", parserConfig(schemaConfig()));
+
+        GcsFileInputPlugin.PluginTask task = config.loadConfig(PluginTask.class);
+        assertFalse(task.getFiles().isEmpty());
+    }
+
+    // both path_prefix and paths are not set
+    @Test(expected = ConfigException.class)
+    public void checkDefaultValuesNoPathSpecified()
+    {
+        ConfigSource config = Exec.newConfigSource()
+                .set("bucket", GCP_BUCKET)
+                .set("auth_method", "private_key")
+                .set("service_account_email", GCP_EMAIL)
+                .set("p12_keyfile", GCP_P12_KEYFILE)
+                .set("p12_keyfile_fullpath", GCP_P12_KEYFILE)
+                .set("parser", parserConfig(schemaConfig()));
+
+        runner.transaction(config, new Control());
     }
 
     // p12_keyfile is null when auth_method is private_key
