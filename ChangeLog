@@ -1,3 +1,6 @@
+Release 0.2.0 - 2016-06-03
+* Support path option to allow to specify list of target objects directly @sonots thanks! [#17](https://github.com/embulk/embulk-input-gcs/pull/17)
+
 Release 0.1.13 - 2016-02-04
 * Upgraded embulk to v0.8.2
 * Updated Google HTTP Client Library from 1.19.0 to 2.1.21.0
