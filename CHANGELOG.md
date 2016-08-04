@@ -1,3 +1,6 @@
+## 0.2.1 - 2016-08-04
+* [maintenance] Use retry logic when generate GCS client [#21](https://github.com/embulk/embulk-input-gcs/pull/21)
+
 ## 0.2.0 - 2016-06-03
 * [new feature] Support path option to allow to specify list of target objects directly @sonots thanks! [#17](https://github.com/embulk/embulk-input-gcs/pull/17)
 
