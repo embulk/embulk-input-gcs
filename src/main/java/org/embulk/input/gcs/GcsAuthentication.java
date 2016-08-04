@@ -1,5 +1,6 @@
 package org.embulk.input.gcs;
 
+import com.google.api.client.auth.oauth2.TokenResponseException;
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.googleapis.compute.ComputeCredential;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
@@ -10,16 +11,21 @@ import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.storage.Storage;
 import com.google.api.services.storage.StorageScopes;
-import com.google.api.services.storage.model.Objects;
 import com.google.common.base.Optional;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import org.embulk.config.ConfigException;
 import org.embulk.spi.Exec;
+import org.embulk.spi.util.RetryExecutor.RetryGiveupException;
+import org.embulk.spi.util.RetryExecutor.Retryable;
 import org.slf4j.Logger;
+import static org.embulk.spi.util.RetryExecutor.retryExecutor;
 
 import java.io.File;
 import java.io.FileInputStream;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.security.GeneralSecurityException;
 import java.util.Collections;
 
@@ -74,13 +80,13 @@ public class GcsAuthentication
                                 StorageScopes.DEVSTORAGE_READ_ONLY
                         )
                 )
-                .setServiceAccountPrivateKeyFromP12File(new File(p12KeyFilePath.orNull()))
+                .setServiceAccountPrivateKeyFromP12File(new File(p12KeyFilePath.get()))
                 .build();
     }
 
     private GoogleCredential getServiceAccountCredentialFromJsonFile() throws IOException
     {
-        FileInputStream stream = new FileInputStream(jsonKeyFilePath.orNull());
+        FileInputStream stream = new FileInputStream(jsonKeyFilePath.get());
 
         return GoogleCredential.fromStream(stream, httpTransport, jsonFactory)
                 .createScoped(Collections.singleton(StorageScopes.DEVSTORAGE_READ_ONLY));
@@ -99,16 +105,84 @@ public class GcsAuthentication
         return credential;
     }
 
-    public Storage getGcsClient(String bucket) throws GoogleJsonResponseException, IOException
+    public Storage getGcsClient(final String bucket, int maxConnectionRetry) throws ConfigException, IOException
     {
-        Storage client = new Storage.Builder(httpTransport, jsonFactory, credentials)
-                .setApplicationName(applicationName)
-                .build();
+        try {
+            return retryExecutor()
+                    .withRetryLimit(maxConnectionRetry)
+                    .withInitialRetryWait(500)
+                    .withMaxRetryWait(30 * 1000)
+                    .runInterruptible(new Retryable<Storage>() {
+                        @Override
+                        public Storage call() throws IOException, RetryGiveupException
+                        {
+                            Storage client = new Storage.Builder(httpTransport, jsonFactory, credentials)
+                                    .setApplicationName(applicationName)
+                                    .build();
 
-        // For throw IOException when authentication is fail.
-        long maxResults = 1;
-        Objects objects = client.objects().list(bucket).setMaxResults(maxResults).execute();
+                            // For throw ConfigException when authentication is fail.
+                            long maxResults = 1;
+                            client.objects().list(bucket).setMaxResults(maxResults).execute();
 
-        return client;
+                            return client;
+                        }
+
+                        @Override
+                        public boolean isRetryableException(Exception exception)
+                        {
+                            if (exception instanceof GoogleJsonResponseException || exception instanceof TokenResponseException) {
+                                int statusCode;
+                                if (exception instanceof GoogleJsonResponseException) {
+                                    statusCode = ((GoogleJsonResponseException) exception).getDetails().getCode();
+                                }
+                                else {
+                                    statusCode = ((TokenResponseException) exception).getStatusCode();
+                                }
+                                if (statusCode / 100 == 4) {
+                                    return false;
+                                }
+                            }
+                            return true;
+                        }
+
+                        @Override
+                        public void onRetry(Exception exception, int retryCount, int retryLimit, int retryWait)
+                                throws RetryGiveupException
+                        {
+                            String message = String.format("GCS GET request failed. Retrying %d/%d after %d seconds. Message: %s: %s",
+                                    retryCount, retryLimit, retryWait / 1000, exception.getClass(), exception.getMessage());
+                            if (retryCount % 3 == 0) {
+                                log.warn(message, exception);
+                            }
+                            else {
+                                log.warn(message);
+                            }
+                        }
+
+                        @Override
+                        public void onGiveup(Exception firstException, Exception lastException)
+                                throws RetryGiveupException
+                        {
+                        }
+                    });
+        }
+        catch (RetryGiveupException ex) {
+            if (ex.getCause() instanceof GoogleJsonResponseException || ex.getCause() instanceof TokenResponseException) {
+                int statusCode = 0;
+                if (ex.getCause() instanceof GoogleJsonResponseException) {
+                    statusCode = ((GoogleJsonResponseException) ex.getCause()).getDetails().getCode();
+                }
+                else if (ex.getCause() instanceof TokenResponseException) {
+                    statusCode = ((TokenResponseException) ex.getCause()).getStatusCode();
+                }
+                if (statusCode / 100 == 4) {
+                    throw new ConfigException(ex);
+                }
+            }
+            throw Throwables.propagate(ex);
+        }
+        catch (InterruptedException ex) {
+            throw new InterruptedIOException();
+        }
     }
 }

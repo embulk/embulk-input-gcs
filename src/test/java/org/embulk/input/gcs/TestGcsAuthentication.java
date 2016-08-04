@@ -1,10 +1,10 @@
 package org.embulk.input.gcs;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
-import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.services.storage.Storage;
 import com.google.common.base.Optional;
 import org.embulk.EmbulkTestRuntime;
+import org.embulk.config.ConfigException;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
@@ -25,6 +25,7 @@ public class TestGcsAuthentication
     private static Optional<String> GCP_JSON_KEYFILE;
     private static String GCP_BUCKET;
     private static final String GCP_APPLICATION_NAME = "embulk-input-gcs";
+    private static int MAX_CONNECTION_RETRY = 3;
 
     /*
      * This test case requires environment variables
@@ -97,12 +98,12 @@ public class TestGcsAuthentication
                 GCP_APPLICATION_NAME
         );
 
-        Storage client = auth.getGcsClient(GCP_BUCKET);
+        Storage client = auth.getGcsClient(GCP_BUCKET, MAX_CONNECTION_RETRY);
 
         assertEquals(Storage.class, client.getClass());
     }
 
-    @Test(expected = GoogleJsonResponseException.class)
+    @Test(expected = ConfigException.class)
     public void testGetGcsClientUsingServiceAccountCredentialThrowJsonResponseException()
             throws NoSuchFieldException, IllegalAccessException, GeneralSecurityException, IOException
     {
@@ -114,7 +115,7 @@ public class TestGcsAuthentication
                 GCP_APPLICATION_NAME
         );
 
-        Storage client = auth.getGcsClient("non-exists-bucket");
+        Storage client = auth.getGcsClient("non-exists-bucket", MAX_CONNECTION_RETRY);
 
         assertEquals(Storage.class, client.getClass());
     }
@@ -162,12 +163,12 @@ public class TestGcsAuthentication
                 GCP_APPLICATION_NAME
         );
 
-        Storage client = auth.getGcsClient(GCP_BUCKET);
+        Storage client = auth.getGcsClient(GCP_BUCKET, MAX_CONNECTION_RETRY);
 
         assertEquals(Storage.class, client.getClass());
     }
 
-    @Test(expected = GoogleJsonResponseException.class)
+    @Test(expected = ConfigException.class)
     public void testGetServiceAccountCredentialFromJsonThrowGoogleJsonResponseException()
             throws NoSuchFieldException, IllegalAccessException, GeneralSecurityException, IOException
     {
@@ -179,6 +180,6 @@ public class TestGcsAuthentication
                 GCP_APPLICATION_NAME
         );
 
-        Storage client = auth.getGcsClient("non-exists-bucket");
+        Storage client = auth.getGcsClient("non-exists-bucket", MAX_CONNECTION_RETRY);
     }
 }
