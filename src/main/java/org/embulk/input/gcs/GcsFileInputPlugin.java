@@ -90,6 +90,10 @@ public class GcsFileInputPlugin
         List<String> getFiles();
         void setFiles(List<String> files);
 
+        @Config("max_connection_retry")
+        @ConfigDefault("10") // 10 times retry to connect GCS server if failed.
+        int getMaxConnectionRetry();
+
         @ConfigInject
         BufferAllocator getBufferAllocator();
     }
@@ -198,7 +202,7 @@ public class GcsFileInputPlugin
     {
         Storage client = null;
         try {
-            client = auth.getGcsClient(task.getBucket());
+            client = auth.getGcsClient(task.getBucket(), task.getMaxConnectionRetry());
         }
         catch (IOException ex) {
             throw new ConfigException(ex);
@@ -303,12 +307,14 @@ public class GcsFileInputPlugin
         private final Storage client;
         private final String bucket;
         private final String key;
+        private final int maxConnectionRetry;
 
-        public GcsInputStreamReopener(Storage client, String bucket, String key)
+        public GcsInputStreamReopener(Storage client, String bucket, String key, int maxConnectionRetry)
         {
             this.client = client;
             this.bucket = bucket;
             this.key = key;
+            this.maxConnectionRetry = maxConnectionRetry;
         }
 
         @Override
@@ -316,7 +322,7 @@ public class GcsFileInputPlugin
         {
             try {
                 return retryExecutor()
-                    .withRetryLimit(3)
+                    .withRetryLimit(maxConnectionRetry)
                     .withInitialRetryWait(500)
                     .withMaxRetryWait(30 * 1000)
                     .runInterruptible(new Retryable<InputStream>() {
@@ -395,6 +401,7 @@ public class GcsFileInputPlugin
         private final Storage client;
         private final String bucket;
         private final String key;
+        private final int maxConnectionRetry;
         private boolean opened = false;
 
         public SingleFileProvider(PluginTask task, int taskIndex)
@@ -402,6 +409,7 @@ public class GcsFileInputPlugin
             this.client = newGcsClient(task, newGcsAuth(task));
             this.bucket = task.getBucket();
             this.key = task.getFiles().get(taskIndex);
+            this.maxConnectionRetry = task.getMaxConnectionRetry();
         }
 
         @Override
@@ -413,7 +421,7 @@ public class GcsFileInputPlugin
             opened = true;
             Storage.Objects.Get getObject = client.objects().get(bucket, key);
 
-            return new ResumableInputStream(getObject.executeMediaAsInputStream(), new GcsInputStreamReopener(client, bucket, key));
+            return new ResumableInputStream(getObject.executeMediaAsInputStream(), new GcsInputStreamReopener(client, bucket, key, maxConnectionRetry));
         }
 
         @Override
