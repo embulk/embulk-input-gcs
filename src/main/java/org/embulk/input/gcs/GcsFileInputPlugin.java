@@ -327,11 +327,16 @@ public class GcsFileInputPlugin
                     .withMaxRetryWait(30 * 1000)
                     .runInterruptible(new Retryable<InputStream>() {
                         @Override
-                        public InputStream call() throws InterruptedIOException, IOException
+                        public InputStream call() throws InterruptedIOException
                         {
                             log.warn(String.format("GCS read failed. Retrying GET request with %,d bytes offset", offset), closedCause);
-                            Storage.Objects.Get getObject = client.objects().get(bucket, key);
-                            return getObject.executeMediaAsInputStream();
+                            try {
+                                Storage.Objects.Get getObject = client.objects().get(bucket, key);
+                                return getObject.executeMediaAsInputStream();
+                            }
+                            catch (IOException ex) {
+                                throw Throwables.propagate(ex);
+                            }
                         }
 
                         @Override
