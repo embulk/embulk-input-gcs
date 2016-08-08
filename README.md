@@ -40,6 +40,7 @@ embulk run /path/to/config.yml
 - **bucket** Google Cloud Storage bucket name (string, required)
 - **path_prefix** prefix of target keys (string, either of "path_prefix" or "paths" is required)
 - **paths** list of target keys (array of string, either of "path_prefix" or "paths" is required)
+- **incremental**: enables incremental loading(boolean, optional. default: true. If incremental loading is enabled, config diff for the next execution will include `last_path` parameter so that next execution skips files before the path. Otherwise, `last_path` will not be included.
 - **auth_method**  (string, optional, "private_key", "json_key" or "compute_engine". default value is "private_key")
 - **service_account_email** Google Cloud Storage service_account_email (string, required when auth_method is private_key)
 - **p12_keyfile** fullpath of p12 key (string, required when auth_method is private_key)
