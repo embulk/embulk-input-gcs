@@ -59,6 +59,10 @@ public class GcsFileInputPlugin
         @ConfigDefault("null")
         Optional<String> getLastPath();
 
+        @Config("incremental")
+        @ConfigDefault("true")
+        boolean getIncremental();
+
         @Config("auth_method")
         @ConfigDefault("\"private_key\"")
         AuthMethod getAuthMethod();
@@ -179,15 +183,17 @@ public class GcsFileInputPlugin
         ConfigDiff configDiff = Exec.newConfigDiff();
 
         List<String> files = new ArrayList<String>(task.getFiles());
-        if (files.isEmpty()) {
-            // keep the last value if any
-            if (task.getLastPath().isPresent()) {
-                configDiff.set("last_path", task.getLastPath().get());
+        if (task.getIncremental()) {
+            if (files.isEmpty()) {
+                // keep the last value if any
+                if (task.getLastPath().isPresent()) {
+                    configDiff.set("last_path", task.getLastPath().get());
+                }
             }
-        }
-        else {
-            Collections.sort(files);
-            configDiff.set("last_path", files.get(files.size() - 1));
+            else {
+                Collections.sort(files);
+                configDiff.set("last_path", files.get(files.size() - 1));
+            }
         }
 
         return configDiff;
