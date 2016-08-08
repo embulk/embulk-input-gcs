@@ -1,3 +1,6 @@
+## 0.2.2 - 2016-08-08
+* [maintenance] Fix validation logic for `path_prefix` and `paths` options [#23](https://github.com/embulk/embulk-input-gcs/pull/23)
+
 ## 0.2.1 - 2016-08-04
 * [maintenance] Use retry logic when generate GCS client [#21](https://github.com/embulk/embulk-input-gcs/pull/21)
 
