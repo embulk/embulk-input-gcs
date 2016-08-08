@@ -142,8 +142,10 @@ public class GcsFileInputPlugin
         if (task.getPathPrefix().isPresent()) {
             task.setFiles(listFiles(task, client));
         }
-        if (task.getFiles().isEmpty()) {
-            throw new ConfigException("No file is found. Fix path_prefix or specify paths directly");
+        else {
+            if (task.getFiles().isEmpty()) {
+                throw new ConfigException("No file is found. Confirm paths option isn't empty");
+            }
         }
         // number of processors is same with number of files
         return resume(task.dump(), task.getFiles().size(), control);

@@ -316,6 +316,42 @@ public class TestGcsFileInputPlugin
     }
 
     @Test
+    public void testNonExistingFilesWithPathPrefix() throws Exception
+    {
+        ConfigSource config = Exec.newConfigSource()
+                .set("bucket", GCP_BUCKET)
+                .set("path_prefix", "/path/to/notfound")
+                .set("auth_method", "private_key")
+                .set("service_account_email", GCP_EMAIL)
+                .set("p12_keyfile", GCP_P12_KEYFILE)
+                .set("json_keyfile", GCP_JSON_KEYFILE)
+                .set("application_name", GCP_APPLICATION_NAME)
+                .set("last_path", "")
+                .set("parser", parserConfig(schemaConfig()));
+
+        ConfigDiff configDiff = runner.transaction(config, new Control());
+
+        assertEquals("", configDiff.get(String.class, "last_path"));
+    }
+
+    @Test(expected = ConfigException.class)
+    public void testNonExistingFilesWithPaths() throws Exception
+    {
+        ConfigSource config = Exec.newConfigSource()
+                .set("bucket", GCP_BUCKET)
+                .set("paths", Arrays.asList())
+                .set("auth_method", "private_key")
+                .set("service_account_email", GCP_EMAIL)
+                .set("p12_keyfile", GCP_P12_KEYFILE)
+                .set("json_keyfile", GCP_JSON_KEYFILE)
+                .set("application_name", GCP_APPLICATION_NAME)
+                .set("last_path", "")
+                .set("parser", parserConfig(schemaConfig()));
+
+        runner.transaction(config, new Control());
+    }
+
+    @Test
     public void testGcsFileInputByOpen()
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, IOException
     {
