@@ -1,3 +1,6 @@
+## 0.2.3 - 2016-08-09
+* [new feature] Support `incremental` option [#24](https://github.com/embulk/embulk-input-gcs/pull/24)
+
 ## 0.2.2 - 2016-08-08
 * [maintenance] Fix validation logic for `path_prefix` and `paths` options [#23](https://github.com/embulk/embulk-input-gcs/pull/23)
 
