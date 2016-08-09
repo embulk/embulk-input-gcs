@@ -105,6 +105,7 @@ public class TestGcsFileInputPlugin
                 .set("path_prefix", "my-prefix");
 
         GcsFileInputPlugin.PluginTask task = config.loadConfig(PluginTask.class);
+        assertEquals(true, task.getIncremental());
         assertEquals("private_key", task.getAuthMethod().toString());
         assertEquals("Embulk GCS input plugin", task.getApplicationName());
     }
@@ -300,6 +301,17 @@ public class TestGcsFileInputPlugin
         List<String> actual = plugin.listGcsFilesByPrefix(client, GCP_BUCKET, GCP_PATH_PREFIX, Optional.<String>absent());
         assertEquals(expected, actual);
         assertEquals(GCP_BUCKET_DIRECTORY + "sample_02.csv", configDiff.get(String.class, "last_path"));
+    }
+
+    @Test
+    public void testListFilesByPrefixIncrementalFalse() throws Exception
+    {
+        ConfigSource config = config().deepCopy()
+                .set("incremental", false);
+
+        ConfigDiff configDiff = runner.transaction(config, new Control());
+
+        assertEquals("{}", configDiff.toString());
     }
 
     @Test
