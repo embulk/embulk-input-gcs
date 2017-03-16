@@ -1,3 +1,6 @@
+## 0.2.4 - 2017-03-16
+* [maintenance] Fix possibility to throw NPE when authentication [#25](https://github.com/embulk/embulk-input-gcs/pull/25)
+
 ## 0.2.3 - 2016-08-09
 * [new feature] Support `incremental` option [#24](https://github.com/embulk/embulk-input-gcs/pull/24)
 
