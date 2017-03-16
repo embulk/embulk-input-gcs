@@ -133,6 +133,14 @@ public class GcsAuthentication
                             if (exception instanceof GoogleJsonResponseException || exception instanceof TokenResponseException) {
                                 int statusCode;
                                 if (exception instanceof GoogleJsonResponseException) {
+                                    if (((GoogleJsonResponseException) exception).getDetails() == null) {
+                                        String content = "";
+                                        if (((GoogleJsonResponseException) exception).getContent() != null) {
+                                            content = ((GoogleJsonResponseException) exception).getContent();
+                                        }
+                                        log.warn("Invalid response was returned : {}", content);
+                                        return true;
+                                    }
                                     statusCode = ((GoogleJsonResponseException) exception).getDetails().getCode();
                                 }
                                 else {
@@ -170,7 +178,9 @@ public class GcsAuthentication
             if (ex.getCause() instanceof GoogleJsonResponseException || ex.getCause() instanceof TokenResponseException) {
                 int statusCode = 0;
                 if (ex.getCause() instanceof GoogleJsonResponseException) {
-                    statusCode = ((GoogleJsonResponseException) ex.getCause()).getDetails().getCode();
+                    if (((GoogleJsonResponseException) ex.getCause()).getDetails() != null) {
+                        statusCode = ((GoogleJsonResponseException) ex.getCause()).getDetails().getCode();
+                    }
                 }
                 else if (ex.getCause() instanceof TokenResponseException) {
                     statusCode = ((TokenResponseException) ex.getCause()).getStatusCode();
