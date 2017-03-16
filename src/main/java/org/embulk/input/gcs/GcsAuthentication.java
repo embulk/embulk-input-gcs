@@ -134,6 +134,11 @@ public class GcsAuthentication
                                 int statusCode;
                                 if (exception instanceof GoogleJsonResponseException) {
                                     if (((GoogleJsonResponseException) exception).getDetails() == null) {
+                                        String content = "";
+                                        if (((GoogleJsonResponseException) exception).getContent() != null) {
+                                            content = ((GoogleJsonResponseException) exception).getContent();
+                                        }
+                                        log.warn("Invalid response was returned : {}", content);
                                         return true;
                                     }
                                     statusCode = ((GoogleJsonResponseException) exception).getDetails().getCode();
