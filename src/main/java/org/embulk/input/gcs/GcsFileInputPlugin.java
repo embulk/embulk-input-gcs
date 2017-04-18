@@ -250,19 +250,21 @@ public class GcsFileInputPlugin
         String lastKey = lastPath.isPresent() ? base64Encode(lastPath.get()) : null;
 
         // @see https://cloud.google.com/storage/docs/json_api/v1/objects#resource
-        try {
-            Storage.Buckets.Get getBucket = client.buckets().get(bucket);
-            getBucket.setProjection("full");
-            Bucket bk = getBucket.execute();
+        if (log.isDebugEnabled()) {
+            try {
+                Storage.Buckets.Get getBucket = client.buckets().get(bucket);
+                getBucket.setProjection("full");
+                Bucket bk = getBucket.execute();
 
-            log.debug("bucket name: " + bucket);
-            log.debug("bucket location: " + bk.getLocation());
-            log.debug("bucket timeCreated: " + bk.getTimeCreated());
-            log.debug("bucket owner: " + bk.getOwner());
-        }
-        catch (IOException e) {
-            log.warn("Could not access to bucket:" + bucket);
-            log.warn(e.getMessage());
+                log.debug("bucket name: " + bucket);
+                log.debug("bucket location: " + bk.getLocation());
+                log.debug("bucket timeCreated: " + bk.getTimeCreated());
+                log.debug("bucket owner: " + bk.getOwner());
+            }
+            catch (IOException e) {
+                log.warn("Could not access to bucket:" + bucket);
+                log.warn(e.getMessage());
+            }
         }
 
         try {
