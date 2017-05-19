@@ -1,3 +1,6 @@
+## 0.2.5 - 2017-05-19
+* [maintenance] Fix InputStream handling to avoid plugin get less records than expected [#27](https://github.com/embulk/embulk-input-gcs/pull/27)
+
 ## 0.2.4 - 2017-03-16
 * [maintenance] Fix possibility to throw NPE when authentication [#25](https://github.com/embulk/embulk-input-gcs/pull/25)
 
