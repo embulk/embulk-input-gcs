@@ -1,6 +1,7 @@
 package org.embulk.input.gcs;
 
 import com.google.api.client.http.HttpResponseException;
+import com.google.api.client.util.IOUtils;
 import com.google.api.services.storage.Storage;
 import com.google.api.services.storage.model.Bucket;
 import com.google.api.services.storage.model.Objects;
@@ -33,6 +34,11 @@ import org.embulk.spi.util.RetryExecutor.Retryable;
 import org.slf4j.Logger;
 import static org.embulk.spi.util.RetryExecutor.retryExecutor;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
@@ -314,13 +320,15 @@ public class GcsFileInputPlugin
             implements ResumableInputStream.Reopener
     {
         private final Logger log = Exec.getLogger(GcsInputStreamReopener.class);
+        private final File tempFile;
         private final Storage client;
         private final String bucket;
         private final String key;
         private final int maxConnectionRetry;
 
-        public GcsInputStreamReopener(Storage client, String bucket, String key, int maxConnectionRetry)
+        public GcsInputStreamReopener(File tempFile, Storage client, String bucket, String key, int maxConnectionRetry)
         {
+            this.tempFile = tempFile;
             this.client = client;
             this.bucket = bucket;
             this.key = key;
@@ -337,11 +345,15 @@ public class GcsFileInputPlugin
                     .withMaxRetryWait(30 * 1000)
                     .runInterruptible(new Retryable<InputStream>() {
                         @Override
-                        public InputStream call() throws InterruptedIOException, IOException
+                        public InputStream call() throws IOException
                         {
                             log.warn(String.format("GCS read failed. Retrying GET request with %,d bytes offset", offset), closedCause);
                             Storage.Objects.Get getObject = client.objects().get(bucket, key);
-                            return getObject.executeMediaAsInputStream();
+
+                            try (BufferedOutputStream outputStream = new BufferedOutputStream(new FileOutputStream(tempFile))) {
+                                IOUtils.copy(getObject.executeMediaAsInputStream(), outputStream);
+                            }
+                            return new BufferedInputStream(new FileInputStream(tempFile));
                         }
 
                         @Override
@@ -430,8 +442,11 @@ public class GcsFileInputPlugin
             }
             opened = true;
             Storage.Objects.Get getObject = client.objects().get(bucket, key);
-
-            return new ResumableInputStream(getObject.executeMediaAsInputStream(), new GcsInputStreamReopener(client, bucket, key, maxConnectionRetry));
+            File tempFile = Exec.getTempFileSpace().createTempFile();
+            try (BufferedOutputStream outputStream = new BufferedOutputStream(new FileOutputStream(tempFile))) {
+                IOUtils.copy(getObject.executeMediaAsInputStream(), outputStream);
+            }
+            return new ResumableInputStream(new BufferedInputStream(new FileInputStream(tempFile)), new GcsInputStreamReopener(tempFile, client, bucket, key, maxConnectionRetry));
         }
 
         @Override
