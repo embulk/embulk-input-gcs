@@ -326,13 +326,21 @@ public class GcsFileInputPlugin
         private final String key;
         private final int maxConnectionRetry;
 
-        public GcsInputStreamReopener(File tempFile, Storage client, String bucket, String key, int maxConnectionRetry)
+        public GcsInputStreamReopener(File tempFile, Storage client, String bucket, String key, int maxConnectionRetry, Exception ex)
         {
             this.tempFile = tempFile;
             this.client = client;
             this.bucket = bucket;
             this.key = key;
             this.maxConnectionRetry = maxConnectionRetry;
+            if (ex != null) {
+                try {
+                    reopen(0, ex);
+                }
+                catch (IOException ex2) {
+                    Throwables.propagate(ex);
+                }
+            }
         }
 
         @Override
@@ -446,7 +454,16 @@ public class GcsFileInputPlugin
             try (BufferedOutputStream outputStream = new BufferedOutputStream(new FileOutputStream(tempFile))) {
                 IOUtils.copy(getObject.executeMediaAsInputStream(), outputStream);
             }
-            return new ResumableInputStream(new BufferedInputStream(new FileInputStream(tempFile)), new GcsInputStreamReopener(tempFile, client, bucket, key, maxConnectionRetry));
+            catch (Exception ex) {
+                return new ResumableInputStream(
+                    new BufferedInputStream(new FileInputStream(tempFile)),
+                    new GcsInputStreamReopener(tempFile, client, bucket, key, maxConnectionRetry, ex)
+                );
+            }
+            return new ResumableInputStream(
+                new BufferedInputStream(new FileInputStream(tempFile)),
+                new GcsInputStreamReopener(tempFile, client, bucket, key, maxConnectionRetry, null)
+            );
         }
 
         @Override

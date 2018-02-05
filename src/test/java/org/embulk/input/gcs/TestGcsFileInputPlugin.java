@@ -409,7 +409,7 @@ public class TestGcsFileInputPlugin
         task.setFiles(plugin.listFiles(task, client));
 
         String key = GCP_BUCKET_DIRECTORY + "sample_01.csv";
-        GcsFileInputPlugin.GcsInputStreamReopener opener = new GcsFileInputPlugin.GcsInputStreamReopener(tempFile, client, GCP_BUCKET, key, MAX_CONNECTION_RETRY);
+        GcsFileInputPlugin.GcsInputStreamReopener opener = new GcsFileInputPlugin.GcsInputStreamReopener(tempFile, client, GCP_BUCKET, key, MAX_CONNECTION_RETRY, null);
         try (InputStream in = opener.reopen(0, new RuntimeException())) {
             BufferedReader r = new BufferedReader(new InputStreamReader(in));
             assertEquals("id,account,time,purchase,comment", r.readLine());
