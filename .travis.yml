@@ -1,3 +1,4 @@
+dist: precise
 language: java
 
 jdk:
@@ -21,3 +22,7 @@ env:
 script:
   - ./gradlew gem
   - ./gradlew --info check jacocoTestReport
+addons:
+  hosts:
+    - example.com
+  hostname: example.com
