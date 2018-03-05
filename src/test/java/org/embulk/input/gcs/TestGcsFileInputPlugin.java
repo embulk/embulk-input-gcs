@@ -308,6 +308,35 @@ public class TestGcsFileInputPlugin
     }
 
     @Test
+    public void testListFilesByPrefixWithPattern()
+            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException
+    {
+        List<String> expected = Arrays.asList(
+                GCP_BUCKET_DIRECTORY + "sample_01.csv"
+        );
+
+        ConfigSource configWithPattern = config.deepCopy().set("path_match_pattern", "1");
+        PluginTask task = configWithPattern.loadConfig(PluginTask.class);
+        ConfigDiff configDiff = plugin.transaction(configWithPattern, new FileInputPlugin.Control() {
+            @Override
+            public List<TaskReport> run(TaskSource taskSource, int taskCount)
+            {
+                assertEquals(1, taskCount);
+                return emptyTaskReports(taskCount);
+            }
+        });
+
+        Method method = GcsFileInputPlugin.class.getDeclaredMethod("newGcsAuth", PluginTask.class);
+        method.setAccessible(true);
+        Storage client = GcsFileInput.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task));
+        FileList.Builder builder = new FileList.Builder(configWithPattern);
+        GcsFileInput.listGcsFilesByPrefix(builder, client, GCP_BUCKET, GCP_PATH_PREFIX, Optional.<String>absent());
+        FileList fileList = builder.build();
+        assertEquals(expected.get(0), fileList.get(0).get(0));
+        assertEquals(GCP_BUCKET_DIRECTORY + "sample_01.csv", configDiff.get(String.class, "last_path"));
+    }
+
+    @Test
     public void testListFilesByPrefixIncrementalFalse() throws Exception
     {
         ConfigSource config = config().deepCopy()
