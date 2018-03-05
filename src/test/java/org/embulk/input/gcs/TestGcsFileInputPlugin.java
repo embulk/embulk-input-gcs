@@ -11,7 +11,6 @@ import org.embulk.config.ConfigException;
 import org.embulk.config.ConfigSource;
 import org.embulk.config.TaskReport;
 import org.embulk.config.TaskSource;
-import org.embulk.input.gcs.GcsFileInputPlugin.PluginTask;
 import org.embulk.spi.Exec;
 import org.embulk.spi.FileInputPlugin;
 import org.embulk.spi.FileInputRunner;
@@ -105,7 +104,7 @@ public class TestGcsFileInputPlugin
                 .set("bucket", GCP_BUCKET)
                 .set("path_prefix", "my-prefix");
 
-        GcsFileInputPlugin.PluginTask task = config.loadConfig(PluginTask.class);
+        PluginTask task = config.loadConfig(PluginTask.class);
         assertEquals(true, task.getIncremental());
         assertEquals("private_key", task.getAuthMethod().toString());
         assertEquals("Embulk GCS input plugin", task.getApplicationName());
@@ -124,7 +123,7 @@ public class TestGcsFileInputPlugin
                 .set("p12_keyfile_fullpath", GCP_P12_KEYFILE)
                 .set("parser", parserConfig(schemaConfig()));
 
-        GcsFileInputPlugin.PluginTask task = config.loadConfig(PluginTask.class);
+        PluginTask task = config.loadConfig(PluginTask.class);
         assertFalse(task.getFiles().isEmpty());
     }
 
@@ -230,7 +229,7 @@ public class TestGcsFileInputPlugin
 
         Method method = GcsFileInputPlugin.class.getDeclaredMethod("newGcsAuth", PluginTask.class);
         method.setAccessible(true);
-        plugin.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task)); // no errors happens
+        GcsFileInput.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task)); // no errors happens
     }
 
     @Test(expected = ConfigException.class)
@@ -251,7 +250,7 @@ public class TestGcsFileInputPlugin
 
         Method method = GcsFileInputPlugin.class.getDeclaredMethod("newGcsAuth", PluginTask.class);
         method.setAccessible(true);
-        plugin.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task));
+        GcsFileInput.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task));
     }
 
     @Test
@@ -298,8 +297,8 @@ public class TestGcsFileInputPlugin
 
         Method method = GcsFileInputPlugin.class.getDeclaredMethod("newGcsAuth", PluginTask.class);
         method.setAccessible(true);
-        Storage client = plugin.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task));
-        List<String> actual = plugin.listGcsFilesByPrefix(client, GCP_BUCKET, GCP_PATH_PREFIX, Optional.<String>absent());
+        Storage client = GcsFileInput.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task));
+        List<String> actual = GcsFileInput.listGcsFilesByPrefix(client, GCP_BUCKET, GCP_PATH_PREFIX, Optional.<String>absent());
         assertEquals(expected, actual);
         assertEquals(GCP_BUCKET_DIRECTORY + "sample_02.csv", configDiff.get(String.class, "last_path"));
     }
@@ -324,8 +323,8 @@ public class TestGcsFileInputPlugin
 
         Method method = GcsFileInputPlugin.class.getDeclaredMethod("newGcsAuth", PluginTask.class);
         method.setAccessible(true);
-        Storage client = plugin.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task));
-        plugin.listGcsFilesByPrefix(client, "non-exists-bucket", "prefix", Optional.<String>absent()); // no errors happens
+        Storage client = GcsFileInput.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task));
+        GcsFileInput.listGcsFilesByPrefix(client, "non-exists-bucket", "prefix", Optional.<String>absent()); // no errors happens
     }
 
     @Test
@@ -379,10 +378,10 @@ public class TestGcsFileInputPlugin
         PluginTask task = config.loadConfig(PluginTask.class);
         runner.transaction(config, new Control());
 
-        Method method = GcsFileInputPlugin.class.getDeclaredMethod("newGcsAuth", PluginTask.class);
+        Method method = GcsFileInput.class.getDeclaredMethod("newGcsAuth", PluginTask.class);
         method.setAccessible(true);
-        Storage client = plugin.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task));
-        task.setFiles(plugin.listFiles(task, client));
+        Storage client = GcsFileInput.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task));
+        task.setFiles(GcsFileInput.listFiles(task, client));
 
         assertRecords(config, output);
     }
@@ -402,14 +401,14 @@ public class TestGcsFileInputPlugin
         PluginTask task = config.loadConfig(PluginTask.class);
         runner.transaction(config, new Control());
 
-        Method method = GcsFileInputPlugin.class.getDeclaredMethod("newGcsAuth", PluginTask.class);
+        Method method = GcsFileInput.class.getDeclaredMethod("newGcsAuth", PluginTask.class);
         method.setAccessible(true);
-        Storage client = plugin.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task));
+        Storage client = GcsFileInput.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task));
         File tempFile = Exec.getTempFileSpace().createTempFile();
-        task.setFiles(plugin.listFiles(task, client));
+        task.setFiles(GcsFileInput.listFiles(task, client));
 
         String key = GCP_BUCKET_DIRECTORY + "sample_01.csv";
-        GcsFileInputPlugin.GcsInputStreamReopener opener = new GcsFileInputPlugin.GcsInputStreamReopener(tempFile, client, GCP_BUCKET, key, MAX_CONNECTION_RETRY);
+        SingleFileProvider.GcsInputStreamReopener opener = new SingleFileProvider.GcsInputStreamReopener(tempFile, client, GCP_BUCKET, key, MAX_CONNECTION_RETRY);
         try (InputStream in = opener.reopen(0, new RuntimeException())) {
             BufferedReader r = new BufferedReader(new InputStreamReader(in));
             assertEquals("id,account,time,purchase,comment", r.readLine());
@@ -420,7 +419,7 @@ public class TestGcsFileInputPlugin
     public void testBase64()
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException
     {
-        Method method = GcsFileInputPlugin.class.getDeclaredMethod("base64Encode", String.class);
+        Method method = GcsFileInput.class.getDeclaredMethod("base64Encode", String.class);
         method.setAccessible(true);
 
         assertEquals("CgFj", method.invoke(plugin, "c"));
