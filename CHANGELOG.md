@@ -1,3 +1,6 @@
+## 0.2.6 - 2018-03-05
+* [maintenance] Support "path_match_pattern" option [#32](https://github.com/embulk/embulk-input-gcs/pull/32)
+
 ## 0.2.5 - 2017-05-19
 * [maintenance] Fix InputStream handling to avoid plugin get less records than expected [#27](https://github.com/embulk/embulk-input-gcs/pull/27)
 
