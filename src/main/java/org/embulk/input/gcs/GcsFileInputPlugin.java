@@ -17,8 +17,6 @@ import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 public class GcsFileInputPlugin
@@ -69,12 +67,17 @@ public class GcsFileInputPlugin
             task.setFiles(GcsFileInput.listFiles(task, client));
         }
         else {
-            if (task.getFiles().isEmpty()) {
+            if (task.getPathFiles().isEmpty()) {
                 throw new ConfigException("No file is found. Confirm paths option isn't empty");
             }
+            FileList.Builder builder = new FileList.Builder(config);
+            for (String file: task.getPathFiles()) {
+                builder.add(file, 1);
+            }
+            task.setFiles(builder.build());
         }
         // number of processors is same with number of files
-        return resume(task.dump(), task.getFiles().size(), control);
+        return resume(task.dump(), task.getFiles().getTaskCount(), control);
     }
 
     private GcsAuthentication newGcsAuth(PluginTask task)
@@ -104,18 +107,8 @@ public class GcsFileInputPlugin
 
         ConfigDiff configDiff = Exec.newConfigDiff();
 
-        List<String> files = new ArrayList<String>(task.getFiles());
         if (task.getIncremental()) {
-            if (files.isEmpty()) {
-                // keep the last value if any
-                if (task.getLastPath().isPresent()) {
-                    configDiff.set("last_path", task.getLastPath().get());
-                }
-            }
-            else {
-                Collections.sort(files);
-                configDiff.set("last_path", files.get(files.size() - 1));
-            }
+            configDiff.set("last_path", task.getFiles().getLastPath(task.getLastPath()));
         }
 
         return configDiff;

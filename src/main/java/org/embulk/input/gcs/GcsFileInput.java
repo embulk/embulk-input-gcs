@@ -8,7 +8,6 @@ import com.google.api.services.storage.model.StorageObject;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
 import com.google.common.io.BaseEncoding;
 import org.embulk.config.ConfigException;
 import org.embulk.config.TaskReport;
@@ -88,11 +87,13 @@ public class GcsFileInput
         };
     }
 
-    public static List<String> listFiles(PluginTask task, Storage client)
+    public static FileList listFiles(PluginTask task, Storage client)
     {
         String bucket = task.getBucket();
 
-        return listGcsFilesByPrefix(client, bucket, task.getPathPrefix().get(), task.getLastPath());
+        FileList.Builder builder = new FileList.Builder(task);
+        listGcsFilesByPrefix(builder, client, bucket, task.getPathPrefix().get(), task.getLastPath());
+        return builder.build();
     }
 
     /**
@@ -100,11 +101,9 @@ public class GcsFileInput
      *
      * The resulting list does not include the file that's size == 0.
      */
-    public static List<String> listGcsFilesByPrefix(Storage client, String bucket,
+    public static void listGcsFilesByPrefix(FileList.Builder builder, Storage client, String bucket,
                                              String prefix, Optional<String> lastPath)
     {
-        ImmutableList.Builder<String> builder = ImmutableList.builder();
-
         String lastKey = lastPath.isPresent() ? base64Encode(lastPath.get()) : null;
 
         // @see https://cloud.google.com/storage/docs/json_api/v1/objects#resource
@@ -139,7 +138,7 @@ public class GcsFileInput
                 }
                 for (StorageObject o : items) {
                     if (o.getSize().compareTo(BigInteger.ZERO) > 0) {
-                        builder.add(o.getName());
+                        builder.add(o.getName(), o.getSize().longValue());
                     }
                     log.debug("filename: " + o.getName());
                     log.debug("updated: " + o.getUpdated());
@@ -156,8 +155,6 @@ public class GcsFileInput
             log.warn(String.format("Could not get file list from bucket:%s", bucket));
             log.warn(e.getMessage());
         }
-
-        return builder.build();
     }
 
     // String nextToken = base64Encode(0x0a + 0x01~0x27 + filePath);

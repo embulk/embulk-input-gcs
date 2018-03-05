@@ -36,7 +36,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assume.assumeNotNull;
 
 import java.lang.reflect.InvocationTargetException;
@@ -124,7 +123,7 @@ public class TestGcsFileInputPlugin
                 .set("parser", parserConfig(schemaConfig()));
 
         PluginTask task = config.loadConfig(PluginTask.class);
-        assertFalse(task.getFiles().isEmpty());
+        assertEquals(2, task.getPathFiles().size());
     }
 
     // both path_prefix and paths are not set
@@ -257,7 +256,9 @@ public class TestGcsFileInputPlugin
     public void testResume()
     {
         PluginTask task = config.loadConfig(PluginTask.class);
-        task.setFiles(Arrays.asList(new String[]{"in/aa/a"}));
+        FileList.Builder builder = new FileList.Builder(config);
+        builder.add("in/aa/a", 1);
+        task.setFiles(builder.build());
         ConfigDiff configDiff = plugin.resume(task.dump(), 0, new FileInputPlugin.Control()
         {
             @Override
@@ -298,9 +299,41 @@ public class TestGcsFileInputPlugin
         Method method = GcsFileInputPlugin.class.getDeclaredMethod("newGcsAuth", PluginTask.class);
         method.setAccessible(true);
         Storage client = GcsFileInput.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task));
-        List<String> actual = GcsFileInput.listGcsFilesByPrefix(client, GCP_BUCKET, GCP_PATH_PREFIX, Optional.<String>absent());
-        assertEquals(expected, actual);
+        FileList.Builder builder = new FileList.Builder(config);
+        GcsFileInput.listGcsFilesByPrefix(builder, client, GCP_BUCKET, GCP_PATH_PREFIX, Optional.<String>absent());
+        FileList fileList = builder.build();
+        assertEquals(expected.get(0), fileList.get(0).get(0));
+        assertEquals(expected.get(1), fileList.get(1).get(0));
         assertEquals(GCP_BUCKET_DIRECTORY + "sample_02.csv", configDiff.get(String.class, "last_path"));
+    }
+
+    @Test
+    public void testListFilesByPrefixWithPattern()
+            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException
+    {
+        List<String> expected = Arrays.asList(
+                GCP_BUCKET_DIRECTORY + "sample_01.csv"
+        );
+
+        ConfigSource configWithPattern = config.deepCopy().set("path_match_pattern", "1");
+        PluginTask task = configWithPattern.loadConfig(PluginTask.class);
+        ConfigDiff configDiff = plugin.transaction(configWithPattern, new FileInputPlugin.Control() {
+            @Override
+            public List<TaskReport> run(TaskSource taskSource, int taskCount)
+            {
+                assertEquals(1, taskCount);
+                return emptyTaskReports(taskCount);
+            }
+        });
+
+        Method method = GcsFileInputPlugin.class.getDeclaredMethod("newGcsAuth", PluginTask.class);
+        method.setAccessible(true);
+        Storage client = GcsFileInput.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task));
+        FileList.Builder builder = new FileList.Builder(configWithPattern);
+        GcsFileInput.listGcsFilesByPrefix(builder, client, GCP_BUCKET, GCP_PATH_PREFIX, Optional.<String>absent());
+        FileList fileList = builder.build();
+        assertEquals(expected.get(0), fileList.get(0).get(0));
+        assertEquals(GCP_BUCKET_DIRECTORY + "sample_01.csv", configDiff.get(String.class, "last_path"));
     }
 
     @Test
@@ -324,7 +357,8 @@ public class TestGcsFileInputPlugin
         Method method = GcsFileInputPlugin.class.getDeclaredMethod("newGcsAuth", PluginTask.class);
         method.setAccessible(true);
         Storage client = GcsFileInput.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task));
-        GcsFileInput.listGcsFilesByPrefix(client, "non-exists-bucket", "prefix", Optional.<String>absent()); // no errors happens
+        FileList.Builder builder = new FileList.Builder(config);
+        GcsFileInput.listGcsFilesByPrefix(builder, client, "non-exists-bucket", "prefix", Optional.<String>absent()); // no errors happens
     }
 
     @Test

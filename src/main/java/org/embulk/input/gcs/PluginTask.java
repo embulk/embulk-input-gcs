@@ -11,7 +11,7 @@ import org.embulk.spi.unit.LocalFile;
 import java.util.List;
 
 public interface PluginTask
-        extends Task
+        extends Task, FileList.Task
 {
     @Config("bucket")
     String getBucket();
@@ -56,8 +56,11 @@ public interface PluginTask
 
     @Config("paths")
     @ConfigDefault("[]")
-    List<String> getFiles();
-    void setFiles(List<String> files);
+    List<String> getPathFiles();
+    void setPathFiles(List<String> files);
+
+    FileList getFiles();
+    void setFiles(FileList files);
 
     @Config("max_connection_retry")
     @ConfigDefault("10") // 10 times retry to connect GCS server if failed.

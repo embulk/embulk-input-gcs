@@ -18,6 +18,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
+import java.util.Iterator;
 
 import static org.embulk.spi.util.RetryExecutor.retryExecutor;
 
@@ -26,7 +27,7 @@ public class SingleFileProvider
 {
     private final Storage client;
     private final String bucket;
-    private final String key;
+    private final Iterator<String> iterator;
     private final int maxConnectionRetry;
     private boolean opened = false;
 
@@ -34,7 +35,7 @@ public class SingleFileProvider
     {
         this.client = GcsFileInput.newGcsClient(task, GcsFileInput.newGcsAuth(task));
         this.bucket = task.getBucket();
-        this.key = task.getFiles().get(taskIndex);
+        this.iterator = task.getFiles().get(taskIndex).iterator();
         this.maxConnectionRetry = task.getMaxConnectionRetry();
     }
 
@@ -45,6 +46,10 @@ public class SingleFileProvider
             return null;
         }
         opened = true;
+        if (!iterator.hasNext()) {
+            return null;
+        }
+        String key = iterator.next();
         Storage.Objects.Get getObject = client.objects().get(bucket, key);
         File tempFile = Exec.getTempFileSpace().createTempFile();
         try (BufferedOutputStream outputStream = new BufferedOutputStream(new FileOutputStream(tempFile))) {
