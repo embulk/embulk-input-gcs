@@ -52,10 +52,14 @@ public class SingleFileProvider
         String key = iterator.next();
         Storage.Objects.Get getObject = client.objects().get(bucket, key);
         File tempFile = Exec.getTempFileSpace().createTempFile();
+        GcsInputStreamReopener reopener = new GcsInputStreamReopener(tempFile, client, bucket, key, maxConnectionRetry);
         try (BufferedOutputStream outputStream = new BufferedOutputStream(new FileOutputStream(tempFile))) {
             IOUtils.copy(getObject.executeMediaAsInputStream(), outputStream);
         }
-        return new ResumableInputStream(new BufferedInputStream(new FileInputStream(tempFile)), new GcsInputStreamReopener(tempFile, client, bucket, key, maxConnectionRetry));
+        catch (Exception ex) {
+            reopener.reopen(0, ex);
+        }
+        return new ResumableInputStream(new BufferedInputStream(new FileInputStream(tempFile)), reopener);
     }
 
     @Override
