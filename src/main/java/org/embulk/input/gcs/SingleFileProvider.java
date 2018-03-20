@@ -48,11 +48,8 @@ public class SingleFileProvider
             return null;
         }
         String key = iterator.next();
-        InputStream inputStream = getRemoteFileWithRetry(client, bucket, key, maxConnectionRetry);
         File tempFile = Exec.getTempFileSpace().createTempFile();
-        try (BufferedOutputStream outputStream = new BufferedOutputStream(new FileOutputStream(tempFile))) {
-            IOUtils.copy(inputStream, outputStream);
-        }
+        getRemoteContentsWithRetry(tempFile, client, bucket, key, maxConnectionRetry);
         return new BufferedInputStream(new FileInputStream(tempFile));
     }
 
@@ -61,19 +58,22 @@ public class SingleFileProvider
     {
     }
 
-    private InputStream getRemoteFileWithRetry(final Storage client, final String bucket, final String key, int maxConnectionRetry)
+    private Void getRemoteContentsWithRetry(final File tempFile, final Storage client, final String bucket, final String key, int maxConnectionRetry)
     {
         try {
             return retryExecutor()
                     .withRetryLimit(maxConnectionRetry)
                     .withInitialRetryWait(500)
                     .withMaxRetryWait(30 * 1000)
-                    .runInterruptible(new RetryExecutor.Retryable<InputStream>() {
+                    .runInterruptible(new RetryExecutor.Retryable<Void>() {
                         @Override
-                        public InputStream call() throws IOException
+                        public Void call() throws IOException
                         {
                             Storage.Objects.Get getObject = client.objects().get(bucket, key);
-                            return getObject.executeMediaAsInputStream();
+                            try (BufferedOutputStream outputStream = new BufferedOutputStream(new FileOutputStream(tempFile))) {
+                                IOUtils.copy(getObject.executeMediaAsInputStream(), outputStream);
+                            }
+                            return null;
                         }
 
                         @Override
