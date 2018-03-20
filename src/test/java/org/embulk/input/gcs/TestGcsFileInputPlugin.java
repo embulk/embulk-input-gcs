@@ -24,12 +24,7 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.io.BufferedReader;
-
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -418,35 +413,6 @@ public class TestGcsFileInputPlugin
         task.setFiles(GcsFileInput.listFiles(task, client));
 
         assertRecords(config, output);
-    }
-
-    @Test
-    public void testGcsFileInputByReopen()
-            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, IOException
-    {
-        ConfigSource config = Exec.newConfigSource()
-                .set("bucket", GCP_BUCKET)
-                .set("path_prefix", GCP_PATH_PREFIX)
-                .set("auth_method", "json_key")
-                .set("service_account_email", GCP_EMAIL)
-                .set("json_keyfile", GCP_JSON_KEYFILE)
-                .set("parser", parserConfig(schemaConfig()));
-
-        PluginTask task = config.loadConfig(PluginTask.class);
-        runner.transaction(config, new Control());
-
-        Method method = GcsFileInput.class.getDeclaredMethod("newGcsAuth", PluginTask.class);
-        method.setAccessible(true);
-        Storage client = GcsFileInput.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task));
-        File tempFile = Exec.getTempFileSpace().createTempFile();
-        task.setFiles(GcsFileInput.listFiles(task, client));
-
-        String key = GCP_BUCKET_DIRECTORY + "sample_01.csv";
-        SingleFileProvider.GcsInputStreamReopener opener = new SingleFileProvider.GcsInputStreamReopener(tempFile, client, GCP_BUCKET, key, MAX_CONNECTION_RETRY);
-        try (InputStream in = opener.reopen(0, new RuntimeException())) {
-            BufferedReader r = new BufferedReader(new InputStreamReader(in));
-            assertEquals("id,account,time,purchase,comment", r.readLine());
-        }
     }
 
     @Test

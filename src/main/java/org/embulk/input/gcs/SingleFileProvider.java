@@ -2,11 +2,9 @@ package org.embulk.input.gcs;
 
 import com.google.api.client.util.IOUtils;
 import com.google.api.services.storage.Storage;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import org.embulk.spi.Exec;
 import org.embulk.spi.util.InputStreamFileInput;
-import org.embulk.spi.util.ResumableInputStream;
 import org.embulk.spi.util.RetryExecutor;
 import org.slf4j.Logger;
 
@@ -17,7 +15,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InterruptedIOException;
 import java.util.Iterator;
 
 import static org.embulk.spi.util.RetryExecutor.retryExecutor;
@@ -30,6 +27,7 @@ public class SingleFileProvider
     private final Iterator<String> iterator;
     private final int maxConnectionRetry;
     private boolean opened = false;
+    private final Logger log = Exec.getLogger(SingleFileProvider.class);
 
     public SingleFileProvider(PluginTask task, int taskIndex)
     {
@@ -50,16 +48,12 @@ public class SingleFileProvider
             return null;
         }
         String key = iterator.next();
-        Storage.Objects.Get getObject = client.objects().get(bucket, key);
+        InputStream inputStream = getRemoteFileWithRetry(client, bucket, key, maxConnectionRetry);
         File tempFile = Exec.getTempFileSpace().createTempFile();
-        GcsInputStreamReopener reopener = new GcsInputStreamReopener(tempFile, client, bucket, key, maxConnectionRetry);
         try (BufferedOutputStream outputStream = new BufferedOutputStream(new FileOutputStream(tempFile))) {
-            IOUtils.copy(getObject.executeMediaAsInputStream(), outputStream);
+            IOUtils.copy(inputStream, outputStream);
         }
-        catch (Exception ex) {
-            reopener.reopen(0, ex);
-        }
-        return new ResumableInputStream(new BufferedInputStream(new FileInputStream(tempFile)), reopener);
+        return new BufferedInputStream(new FileInputStream(tempFile));
     }
 
     @Override
@@ -67,81 +61,50 @@ public class SingleFileProvider
     {
     }
 
-    @VisibleForTesting
-    static class GcsInputStreamReopener
-            implements ResumableInputStream.Reopener
+    private InputStream getRemoteFileWithRetry(final Storage client, final String bucket, final String key, int maxConnectionRetry)
     {
-        private final Logger log = Exec.getLogger(GcsInputStreamReopener.class);
-        private final File tempFile;
-        private final Storage client;
-        private final String bucket;
-        private final String key;
-        private final int maxConnectionRetry;
+        try {
+            return retryExecutor()
+                    .withRetryLimit(maxConnectionRetry)
+                    .withInitialRetryWait(500)
+                    .withMaxRetryWait(30 * 1000)
+                    .runInterruptible(new RetryExecutor.Retryable<InputStream>() {
+                        @Override
+                        public InputStream call() throws IOException
+                        {
+                            Storage.Objects.Get getObject = client.objects().get(bucket, key);
+                            return getObject.executeMediaAsInputStream();
+                        }
 
-        public GcsInputStreamReopener(File tempFile, Storage client, String bucket, String key, int maxConnectionRetry)
-        {
-            this.tempFile = tempFile;
-            this.client = client;
-            this.bucket = bucket;
-            this.key = key;
-            this.maxConnectionRetry = maxConnectionRetry;
+                        @Override
+                        public boolean isRetryableException(Exception exception)
+                        {
+                            return true;  // TODO
+                        }
+
+                        @Override
+                        public void onRetry(Exception exception, int retryCount, int retryLimit, int retryWait)
+                                throws RetryExecutor.RetryGiveupException
+                        {
+                            String message = String.format("GCS GET request failed. Retrying %d/%d after %d seconds. Message: %s",
+                                    retryCount, retryLimit, retryWait / 1000, exception.getMessage());
+                            if (retryCount % 3 == 0) {
+                                log.warn(message, exception);
+                            }
+                            else {
+                                log.warn(message);
+                            }
+                        }
+
+                        @Override
+                        public void onGiveup(Exception firstException, Exception lastException)
+                                throws RetryExecutor.RetryGiveupException
+                        {
+                        }
+                    });
         }
-
-        @Override
-        public InputStream reopen(final long offset, final Exception closedCause) throws IOException
-        {
-            try {
-                return retryExecutor()
-                        .withRetryLimit(maxConnectionRetry)
-                        .withInitialRetryWait(500)
-                        .withMaxRetryWait(30 * 1000)
-                        .runInterruptible(new RetryExecutor.Retryable<InputStream>() {
-                            @Override
-                            public InputStream call() throws IOException
-                            {
-                                log.warn(String.format("GCS read failed. Retrying GET request with %,d bytes offset", offset), closedCause);
-                                Storage.Objects.Get getObject = client.objects().get(bucket, key);
-
-                                try (BufferedOutputStream outputStream = new BufferedOutputStream(new FileOutputStream(tempFile))) {
-                                    IOUtils.copy(getObject.executeMediaAsInputStream(), outputStream);
-                                }
-                                return new BufferedInputStream(new FileInputStream(tempFile));
-                            }
-
-                            @Override
-                            public boolean isRetryableException(Exception exception)
-                            {
-                                return true;  // TODO
-                            }
-
-                            @Override
-                            public void onRetry(Exception exception, int retryCount, int retryLimit, int retryWait)
-                                    throws RetryExecutor.RetryGiveupException
-                            {
-                                String message = String.format("GCS GET request failed. Retrying %d/%d after %d seconds. Message: %s",
-                                        retryCount, retryLimit, retryWait / 1000, exception.getMessage());
-                                if (retryCount % 3 == 0) {
-                                    log.warn(message, exception);
-                                }
-                                else {
-                                    log.warn(message);
-                                }
-                            }
-
-                            @Override
-                            public void onGiveup(Exception firstException, Exception lastException)
-                                    throws RetryExecutor.RetryGiveupException
-                            {
-                            }
-                        });
-            }
-            catch (RetryExecutor.RetryGiveupException ex) {
-                Throwables.propagateIfInstanceOf(ex.getCause(), IOException.class);
-                throw Throwables.propagate(ex.getCause());
-            }
-            catch (InterruptedException ex) {
-                throw new InterruptedIOException();
-            }
+        catch (RetryExecutor.RetryGiveupException | InterruptedException ex) {
+            throw Throwables.propagate(ex.getCause());
         }
     }
 }
