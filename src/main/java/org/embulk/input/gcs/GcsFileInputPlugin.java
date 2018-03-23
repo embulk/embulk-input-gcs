@@ -71,7 +71,7 @@ public class GcsFileInputPlugin
                 throw new ConfigException("No file is found. Confirm paths option isn't empty");
             }
             FileList.Builder builder = new FileList.Builder(config);
-            for (String file: task.getPathFiles()) {
+            for (String file : task.getPathFiles()) {
                 builder.add(file, 1);
             }
             task.setFiles(builder.build());
