@@ -130,25 +130,33 @@ public class GcsAuthentication
                         @Override
                         public boolean isRetryableException(Exception exception)
                         {
-                            if (exception instanceof GoogleJsonResponseException || exception instanceof TokenResponseException) {
-                                int statusCode;
-                                if (exception instanceof GoogleJsonResponseException) {
-                                    if (((GoogleJsonResponseException) exception).getDetails() == null) {
-                                        String content = "";
-                                        if (((GoogleJsonResponseException) exception).getContent() != null) {
-                                            content = ((GoogleJsonResponseException) exception).getContent();
-                                        }
+                            if (exception instanceof GoogleJsonResponseException) {
+                                if (((GoogleJsonResponseException) exception).getDetails() == null) {
+                                    if (((GoogleJsonResponseException) exception).getContent() != null) {
+                                        String content = ((GoogleJsonResponseException) exception).getContent();
                                         log.warn("Invalid response was returned : {}", content);
                                         return true;
                                     }
-                                    statusCode = ((GoogleJsonResponseException) exception).getDetails().getCode();
                                 }
-                                else {
-                                    statusCode = ((TokenResponseException) exception).getStatusCode();
+                                int statusCode = ((GoogleJsonResponseException) exception).getDetails().getCode();
+                                return !(statusCode / 100 == 4);
+                            }
+                            else if (exception instanceof TokenResponseException) {
+                                TokenResponseException ex = (TokenResponseException) exception;
+                                if (ex.getDetails() != null && ex.getDetails().getErrorDescription() != null) {
+                                    String errorDescription = ex.getDetails().getErrorDescription();
+                                    // Retry: 400 BadRequest "Invalid JWT..."
+                                    // Caused by: com.google.api.client.auth.oauth2.TokenResponseException: 400 Bad Request
+                                    // {
+                                    //   "error" : "invalid_grant",
+                                    //   "error_description" : "Invalid JWT: No valid verifier found for issuer."
+                                    // }
+                                    if (errorDescription.contains("Invalid JWT")) {
+                                        log.warn("Invalid response was returned : {}", errorDescription);
+                                        return true;
+                                    }
                                 }
-                                if (statusCode / 100 == 4) {
-                                    return false;
-                                }
+                                return !(ex.getStatusCode() / 100 == 4);
                             }
                             return true;
                         }
