@@ -1,3 +1,6 @@
+## 0.2.8 - 2018-06-29
+* [maintenance] Improve retry logic to retry "400 Bad Request" "Invalid JWT: No valid verifier found for issuer" [#34](https://github.com/embulk/embulk-input-gcs/pull/34)
+
 ## 0.2.7 - 2018-03-22
 * [maintenance] Fix retry logic to avoid IOException happens while IOUtils.copy() [#33](https://github.com/embulk/embulk-input-gcs/pull/33)
 
