@@ -2,7 +2,6 @@ package org.embulk.input.gcs;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.services.storage.Storage;
-import com.google.common.base.Optional;
 import org.embulk.EmbulkTestRuntime;
 import org.embulk.config.ConfigException;
 import org.junit.BeforeClass;
@@ -14,6 +13,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.security.GeneralSecurityException;
+import java.util.Optional;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeNotNull;

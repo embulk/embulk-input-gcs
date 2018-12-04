@@ -1,6 +1,5 @@
 package org.embulk.input.gcs;
 
-import com.google.common.base.Optional;
 import org.embulk.config.Config;
 import org.embulk.config.ConfigDefault;
 import org.embulk.config.ConfigInject;
@@ -9,6 +8,7 @@ import org.embulk.spi.BufferAllocator;
 import org.embulk.spi.unit.LocalFile;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface PluginTask
         extends Task, FileList.Task

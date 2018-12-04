@@ -6,8 +6,6 @@ import com.google.api.services.storage.model.Bucket;
 import com.google.api.services.storage.model.Objects;
 import com.google.api.services.storage.model.StorageObject;
 import com.google.common.base.Charsets;
-import com.google.common.base.Function;
-import com.google.common.base.Optional;
 import com.google.common.io.BaseEncoding;
 import org.embulk.config.ConfigException;
 import org.embulk.config.TaskReport;
@@ -21,6 +19,8 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.security.GeneralSecurityException;
 import java.util.List;
+import java.util.Optional;
+import java.util.function.Function;
 
 public class GcsFileInput
         extends InputStreamFileInput
@@ -53,8 +53,8 @@ public class GcsFileInput
             return new GcsAuthentication(
                     task.getAuthMethod().getString(),
                     task.getServiceAccountEmail(),
-                    task.getP12Keyfile().transform(localFileToPathString()),
-                    task.getJsonKeyfile().transform(localFileToPathString()),
+                    task.getP12Keyfile().map(localFileToPathString()),
+                    task.getJsonKeyfile().map(localFileToPathString()),
                     task.getApplicationName()
             );
         }
