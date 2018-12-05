@@ -11,7 +11,6 @@ import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.storage.Storage;
 import com.google.api.services.storage.StorageScopes;
-import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import org.embulk.config.ConfigException;
@@ -28,6 +27,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.security.GeneralSecurityException;
 import java.util.Collections;
+import java.util.Optional;
 
 public class GcsAuthentication
 {
@@ -74,7 +74,7 @@ public class GcsAuthentication
         return new GoogleCredential.Builder()
                 .setTransport(httpTransport)
                 .setJsonFactory(jsonFactory)
-                .setServiceAccountId(serviceAccountEmail.orNull())
+                .setServiceAccountId(serviceAccountEmail.orElseGet(null))
                 .setServiceAccountScopes(
                         ImmutableList.of(
                                 StorageScopes.DEVSTORAGE_READ_ONLY

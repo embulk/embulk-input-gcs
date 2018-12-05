@@ -1,7 +1,6 @@
 package org.embulk.input.gcs;
 
 import com.google.api.services.storage.Storage;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -29,6 +28,7 @@ import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeNotNull;
@@ -295,7 +295,7 @@ public class TestGcsFileInputPlugin
         method.setAccessible(true);
         Storage client = GcsFileInput.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task));
         FileList.Builder builder = new FileList.Builder(config);
-        GcsFileInput.listGcsFilesByPrefix(builder, client, GCP_BUCKET, GCP_PATH_PREFIX, Optional.<String>absent());
+        GcsFileInput.listGcsFilesByPrefix(builder, client, GCP_BUCKET, GCP_PATH_PREFIX, Optional.empty());
         FileList fileList = builder.build();
         assertEquals(expected.get(0), fileList.get(0).get(0));
         assertEquals(expected.get(1), fileList.get(1).get(0));
@@ -325,7 +325,7 @@ public class TestGcsFileInputPlugin
         method.setAccessible(true);
         Storage client = GcsFileInput.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task));
         FileList.Builder builder = new FileList.Builder(configWithPattern);
-        GcsFileInput.listGcsFilesByPrefix(builder, client, GCP_BUCKET, GCP_PATH_PREFIX, Optional.<String>absent());
+        GcsFileInput.listGcsFilesByPrefix(builder, client, GCP_BUCKET, GCP_PATH_PREFIX, Optional.empty());
         FileList fileList = builder.build();
         assertEquals(expected.get(0), fileList.get(0).get(0));
         assertEquals(GCP_BUCKET_DIRECTORY + "sample_01.csv", configDiff.get(String.class, "last_path"));
@@ -353,7 +353,7 @@ public class TestGcsFileInputPlugin
         method.setAccessible(true);
         Storage client = GcsFileInput.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task));
         FileList.Builder builder = new FileList.Builder(config);
-        GcsFileInput.listGcsFilesByPrefix(builder, client, "non-exists-bucket", "prefix", Optional.<String>absent()); // no errors happens
+        GcsFileInput.listGcsFilesByPrefix(builder, client, "non-exists-bucket", "prefix", Optional.empty()); // no errors happens
     }
 
     @Test
