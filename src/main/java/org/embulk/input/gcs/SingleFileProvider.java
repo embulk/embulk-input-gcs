@@ -5,6 +5,7 @@ import com.google.api.services.storage.Storage;
 import com.google.common.base.Throwables;
 import org.embulk.spi.Exec;
 import org.embulk.spi.util.InputStreamFileInput;
+import org.embulk.spi.util.InputStreamFileInput.InputStreamWithHints;
 import org.embulk.spi.util.RetryExecutor;
 import org.slf4j.Logger;
 
@@ -14,7 +15,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Iterator;
 
 import static org.embulk.spi.util.RetryExecutor.retryExecutor;
@@ -38,7 +38,7 @@ public class SingleFileProvider
     }
 
     @Override
-    public InputStream openNext() throws IOException
+    public InputStreamWithHints openNextWithHints() throws IOException
     {
         if (opened) {
             return null;
@@ -50,7 +50,10 @@ public class SingleFileProvider
         String key = iterator.next();
         File tempFile = Exec.getTempFileSpace().createTempFile();
         getRemoteContentsWithRetry(tempFile, client, bucket, key, maxConnectionRetry);
-        return new BufferedInputStream(new FileInputStream(tempFile));
+        return new InputStreamWithHints(
+                new BufferedInputStream(new FileInputStream(tempFile)),
+                String.format("gcs://%s/%s", bucket, key)
+        );
     }
 
     @Override
