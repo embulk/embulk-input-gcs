@@ -20,15 +20,15 @@ targetCompatibility = 1.8
 version = "0.2.8"
 
 dependencies {
-    compile  "org.embulk:embulk-core:0.9.11"
-    provided "org.embulk:embulk-core:0.9.11"
+    compile  "org.embulk:embulk-core:0.9.12"
+    provided "org.embulk:embulk-core:0.9.12"
 
     compile "com.google.http-client:google-http-client-jackson2:1.21.0"
     compile ("com.google.apis:google-api-services-storage:v1-rev59-1.21.0") {exclude module: "guava-jdk5"}
 
     testCompile "junit:junit:4.12"
-    testCompile "org.embulk:embulk-core:0.9.11:tests"
-    testCompile "org.embulk:embulk-standards:0.9.11"
+    testCompile "org.embulk:embulk-core:0.9.12:tests"
+    testCompile "org.embulk:embulk-standards:0.9.12"
 }
 
 task classpath(type: Copy, dependsOn: ["jar"]) {
