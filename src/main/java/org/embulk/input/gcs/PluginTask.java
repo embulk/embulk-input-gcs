@@ -3,6 +3,7 @@ package org.embulk.input.gcs;
 import org.embulk.config.Config;
 import org.embulk.config.ConfigDefault;
 import org.embulk.config.ConfigInject;
+import org.embulk.config.Task;
 import org.embulk.spi.BufferAllocator;
 import org.embulk.spi.unit.LocalFile;
 
@@ -10,7 +11,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface PluginTask
-        extends org.embulk.config.Task, FileList.Task, RetryUtils.Task
+        extends Task, FileList.Task, RetryUtils.Task
 {
     @Config("bucket")
     String getBucket();
