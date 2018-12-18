@@ -1,6 +1,6 @@
 package org.embulk.input.gcs;
 
-import com.google.api.services.storage.Storage;
+import com.google.cloud.storage.Storage;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeNotNull;
 
 import java.lang.reflect.InvocationTargetException;
@@ -99,8 +100,7 @@ public class TestGcsFileInputPlugin
                 .set("path_prefix", "my-prefix");
 
         PluginTask task = config.loadConfig(PluginTask.class);
-        assertEquals(true, task.getIncremental());
-        assertEquals("private_key", task.getAuthMethod().toString());
+        assertTrue(task.getIncremental());
         assertEquals("Embulk GCS input plugin", task.getApplicationName());
     }
 
@@ -215,36 +215,14 @@ public class TestGcsFileInputPlugin
 
     @Test
     public void testGcsClientCreateSuccessfully()
-            throws GeneralSecurityException, IOException, NoSuchMethodException,
-            IllegalAccessException, InvocationTargetException
     {
-        PluginTask task = config().loadConfig(PluginTask.class);
-        runner.transaction(config, new Control());
-
-        Method method = GcsFileInputPlugin.class.getDeclaredMethod("newGcsAuth", PluginTask.class);
-        method.setAccessible(true);
-        GcsFileInput.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task)); // no errors happens
+        // TODO verify ServiceUtils#newClient()
     }
 
     @Test(expected = ConfigException.class)
     public void testGcsClientCreateThrowConfigException()
-            throws GeneralSecurityException, IOException, NoSuchMethodException,
-            IllegalAccessException, InvocationTargetException
     {
-        ConfigSource config = Exec.newConfigSource()
-                .set("bucket", "non-exists-bucket")
-                .set("path_prefix", "my-prefix")
-                .set("auth_method", "json_key")
-                .set("service_account_email", GCP_EMAIL)
-                .set("json_keyfile", GCP_JSON_KEYFILE)
-                .set("parser", parserConfig(schemaConfig()));
-
-        PluginTask task = config.loadConfig(PluginTask.class);
-        runner.transaction(config, new Control());
-
-        Method method = GcsFileInputPlugin.class.getDeclaredMethod("newGcsAuth", PluginTask.class);
-        method.setAccessible(true);
-        GcsFileInput.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task));
+        // TODO verify ServiceUtils#newClient() to throws ConfigException for non-existing-bucket
     }
 
     @Test
@@ -254,14 +232,7 @@ public class TestGcsFileInputPlugin
         FileList.Builder builder = new FileList.Builder(config);
         builder.add("in/aa/a", 1);
         task.setFiles(builder.build());
-        ConfigDiff configDiff = plugin.resume(task.dump(), 0, new FileInputPlugin.Control()
-        {
-            @Override
-            public List<TaskReport> run(TaskSource taskSource, int taskCount)
-            {
-                return emptyTaskReports(taskCount);
-            }
-        });
+        ConfigDiff configDiff = plugin.resume(task.dump(), 0, (taskSource, taskCount) -> emptyTaskReports(taskCount));
         assertEquals("in/aa/a", configDiff.get(String.class, "last_path"));
     }
 
@@ -274,7 +245,6 @@ public class TestGcsFileInputPlugin
 
     @Test
     public void testListFilesByPrefix()
-            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException
     {
         List<String> expected = Arrays.asList(
                 GCP_BUCKET_DIRECTORY + "sample_01.csv",
@@ -291,9 +261,7 @@ public class TestGcsFileInputPlugin
             }
         });
 
-        Method method = GcsFileInputPlugin.class.getDeclaredMethod("newGcsAuth", PluginTask.class);
-        method.setAccessible(true);
-        Storage client = GcsFileInput.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task));
+        Storage client = ServiceUtils.newClient(task.getJsonKeyfile());
         FileList.Builder builder = new FileList.Builder(config);
         GcsFileInput.listGcsFilesByPrefix(builder, client, GCP_BUCKET, GCP_PATH_PREFIX, Optional.empty());
         FileList fileList = builder.build();
@@ -304,7 +272,6 @@ public class TestGcsFileInputPlugin
 
     @Test
     public void testListFilesByPrefixWithPattern()
-            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException
     {
         List<String> expected = Arrays.asList(
                 GCP_BUCKET_DIRECTORY + "sample_01.csv"
@@ -312,18 +279,12 @@ public class TestGcsFileInputPlugin
 
         ConfigSource configWithPattern = config.deepCopy().set("path_match_pattern", "1");
         PluginTask task = configWithPattern.loadConfig(PluginTask.class);
-        ConfigDiff configDiff = plugin.transaction(configWithPattern, new FileInputPlugin.Control() {
-            @Override
-            public List<TaskReport> run(TaskSource taskSource, int taskCount)
-            {
-                assertEquals(1, taskCount);
-                return emptyTaskReports(taskCount);
-            }
+        ConfigDiff configDiff = plugin.transaction(configWithPattern, (taskSource, taskCount) -> {
+            assertEquals(1, taskCount);
+            return emptyTaskReports(taskCount);
         });
 
-        Method method = GcsFileInputPlugin.class.getDeclaredMethod("newGcsAuth", PluginTask.class);
-        method.setAccessible(true);
-        Storage client = GcsFileInput.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task));
+        Storage client = ServiceUtils.newClient(task.getJsonKeyfile());
         FileList.Builder builder = new FileList.Builder(configWithPattern);
         GcsFileInput.listGcsFilesByPrefix(builder, client, GCP_BUCKET, GCP_PATH_PREFIX, Optional.empty());
         FileList fileList = builder.build();
@@ -332,7 +293,7 @@ public class TestGcsFileInputPlugin
     }
 
     @Test
-    public void testListFilesByPrefixIncrementalFalse() throws Exception
+    public void testListFilesByPrefixIncrementalFalse()
     {
         ConfigSource config = config().deepCopy()
                 .set("incremental", false);
@@ -344,20 +305,17 @@ public class TestGcsFileInputPlugin
 
     @Test
     public void testListFilesByPrefixNonExistsBucket()
-            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException
     {
         PluginTask task = config.loadConfig(PluginTask.class);
         runner.transaction(config, new Control());
 
-        Method method = GcsFileInputPlugin.class.getDeclaredMethod("newGcsAuth", PluginTask.class);
-        method.setAccessible(true);
-        Storage client = GcsFileInput.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task));
+        Storage client = ServiceUtils.newClient(task.getJsonKeyfile());
         FileList.Builder builder = new FileList.Builder(config);
         GcsFileInput.listGcsFilesByPrefix(builder, client, "non-exists-bucket", "prefix", Optional.empty()); // no errors happens
     }
 
     @Test
-    public void testNonExistingFilesWithPathPrefix() throws Exception
+    public void testNonExistingFilesWithPathPrefix()
     {
         ConfigSource config = Exec.newConfigSource()
                 .set("bucket", GCP_BUCKET)
@@ -376,7 +334,7 @@ public class TestGcsFileInputPlugin
     }
 
     @Test(expected = ConfigException.class)
-    public void testNonExistingFilesWithPaths() throws Exception
+    public void testNonExistingFilesWithPaths()
     {
         ConfigSource config = Exec.newConfigSource()
                 .set("bucket", GCP_BUCKET)
@@ -394,7 +352,6 @@ public class TestGcsFileInputPlugin
 
     @Test
     public void testGcsFileInputByOpen()
-            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, IOException
     {
         ConfigSource config = Exec.newConfigSource()
                 .set("bucket", GCP_BUCKET)
@@ -407,9 +364,7 @@ public class TestGcsFileInputPlugin
         PluginTask task = config.loadConfig(PluginTask.class);
         runner.transaction(config, new Control());
 
-        Method method = GcsFileInput.class.getDeclaredMethod("newGcsAuth", PluginTask.class);
-        method.setAccessible(true);
-        Storage client = GcsFileInput.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task));
+        Storage client = ServiceUtils.newClient(task.getJsonKeyfile());
         task.setFiles(GcsFileInput.listFiles(task, client));
 
         assertRecords(config, output);

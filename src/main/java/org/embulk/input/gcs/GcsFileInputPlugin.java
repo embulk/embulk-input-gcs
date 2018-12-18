@@ -1,7 +1,6 @@
 package org.embulk.input.gcs;
 
-import com.google.api.services.storage.Storage;
-import com.google.common.base.Throwables;
+import com.google.cloud.storage.Storage;
 import org.embulk.config.ConfigDiff;
 import org.embulk.config.ConfigException;
 import org.embulk.config.ConfigSource;
@@ -10,57 +9,27 @@ import org.embulk.config.TaskSource;
 import org.embulk.spi.Exec;
 import org.embulk.spi.FileInputPlugin;
 import org.embulk.spi.TransactionalFileInput;
-import org.embulk.spi.unit.LocalFile;
-import org.slf4j.Logger;
 
-import java.io.IOException;
-import java.security.GeneralSecurityException;
 import java.util.List;
-import java.util.Optional;
-import java.util.function.Function;
 
 public class GcsFileInputPlugin
         implements FileInputPlugin
 {
-    private static final Logger log = Exec.getLogger(GcsFileInputPlugin.class);
-
     @Override
     public ConfigDiff transaction(ConfigSource config,
                                   FileInputPlugin.Control control)
     {
         PluginTask task = config.loadConfig(PluginTask.class);
 
-        if (task.getP12KeyfileFullpath().isPresent()) {
-            if (task.getP12Keyfile().isPresent()) {
-                throw new ConfigException("Setting both p12_keyfile_fullpath and p12_keyfile is invalid");
-            }
-            try {
-                task.setP12Keyfile(Optional.of(LocalFile.of(task.getP12KeyfileFullpath().get())));
-            }
-            catch (IOException ex) {
-                throw Throwables.propagate(ex);
-            }
-        }
-
-        if (task.getAuthMethod().getString().equals("json_key")) {
-            if (!task.getJsonKeyfile().isPresent()) {
-                throw new ConfigException("If auth_method is json_key, you have to set json_keyfile");
-            }
-        }
-        else if (task.getAuthMethod().getString().equals("private_key")) {
-            if (!task.getP12Keyfile().isPresent() || !task.getServiceAccountEmail().isPresent()) {
-                throw new ConfigException("If auth_method is private_key, you have to set both service_account_email and p12_keyfile");
-            }
-        }
-
         // @see https://cloud.google.com/storage/docs/bucket-naming
         if (task.getLastPath().isPresent()) {
-            if (task.getLastPath().get().length() >= 128) {
-                throw new ConfigException("last_path length is allowed between 1 and 1024 bytes");
+            final String lastPath = task.getLastPath().get();
+            if (lastPath.length() < 3 || lastPath.length() >= 222) {
+                throw new ConfigException("last_path length must be between 3 and 222");
             }
         }
 
-        Storage client = GcsFileInput.newGcsClient(task, newGcsAuth(task));
+        Storage client = ServiceUtils.newClient(task.getJsonKeyfile());
 
         // list files recursively if path_prefix is specified
         if (task.getPathPrefix().isPresent()) {
@@ -78,22 +47,6 @@ public class GcsFileInputPlugin
         }
         // number of processors is same with number of files
         return resume(task.dump(), task.getFiles().getTaskCount(), control);
-    }
-
-    private GcsAuthentication newGcsAuth(PluginTask task)
-    {
-        try {
-            return new GcsAuthentication(
-                    task.getAuthMethod().getString(),
-                    task.getServiceAccountEmail(),
-                    task.getP12Keyfile().map(localFileToPathString()),
-                    task.getJsonKeyfile().map(localFileToPathString()),
-                    task.getApplicationName()
-            );
-        }
-        catch (GeneralSecurityException | IOException ex) {
-            throw new ConfigException(ex);
-        }
     }
 
     @Override
@@ -119,17 +72,6 @@ public class GcsFileInputPlugin
                         int taskCount,
                         List<TaskReport> successTaskReports)
     {
-    }
-
-    private Function<LocalFile, String> localFileToPathString()
-    {
-        return new Function<LocalFile, String>()
-        {
-            public String apply(LocalFile file)
-            {
-                return file.getPath().toString();
-            }
-        };
     }
 
     @Override

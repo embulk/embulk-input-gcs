@@ -28,27 +28,9 @@ public interface PluginTask
     @ConfigDefault("true")
     boolean getIncremental();
 
-    @Config("auth_method")
-    @ConfigDefault("\"private_key\"")
-    GcsFileInput.AuthMethod getAuthMethod();
-
-    @Config("service_account_email")
-    @ConfigDefault("null")
-    Optional<String> getServiceAccountEmail();
-
     @Config("application_name")
     @ConfigDefault("\"Embulk GCS input plugin\"")
     String getApplicationName();
-
-    // kept for backward compatibility
-    @Config("p12_keyfile_fullpath")
-    @ConfigDefault("null")
-    Optional<String> getP12KeyfileFullpath();
-
-    @Config("p12_keyfile")
-    @ConfigDefault("null")
-    Optional<LocalFile> getP12Keyfile();
-    void setP12Keyfile(Optional<LocalFile> p12Keyfile);
 
     @Config("json_keyfile")
     @ConfigDefault("null")

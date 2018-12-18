@@ -23,8 +23,7 @@ dependencies {
     compile  "org.embulk:embulk-core:0.9.11"
     provided "org.embulk:embulk-core:0.9.11"
 
-    compile "com.google.http-client:google-http-client-jackson2:1.21.0"
-    compile ("com.google.apis:google-api-services-storage:v1-rev59-1.21.0") {exclude module: "guava-jdk5"}
+    compile 'com.google.cloud:google-cloud-storage:1.56.0'
 
     testCompile "junit:junit:4.12"
     testCompile "org.embulk:embulk-core:0.9.11:tests"
