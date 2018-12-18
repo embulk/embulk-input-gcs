@@ -1,6 +1,5 @@
 package org.embulk.input.gcs;
 
-import com.google.cloud.storage.Storage;
 import org.embulk.config.ConfigDiff;
 import org.embulk.config.ConfigException;
 import org.embulk.config.ConfigSource;
@@ -23,17 +22,14 @@ public class GcsFileInputPlugin
 
         // @see https://cloud.google.com/storage/docs/bucket-naming
         if (task.getLastPath().isPresent()) {
-            final String lastPath = task.getLastPath().get();
-            if (lastPath.length() < 3 || lastPath.length() >= 222) {
-                throw new ConfigException("last_path length must be between 3 and 222");
+            if (task.getLastPath().get().length() >= 128) {
+                throw new ConfigException("last_path length is allowed between 1 and 1024 bytes");
             }
         }
 
-        Storage client = ServiceUtils.newClient(task.getJsonKeyfile());
-
         // list files recursively if path_prefix is specified
         if (task.getPathPrefix().isPresent()) {
-            task.setFiles(GcsFileInput.listFiles(task, client));
+            task.setFiles(GcsFileInput.listFiles(task));
         }
         else {
             if (task.getPathFiles().isEmpty()) {

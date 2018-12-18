@@ -1,11 +1,13 @@
 plugins {
-    id "com.jfrog.bintray" version "1.1"
-    id "com.github.jruby-gradle.base" version "0.1.5"
+    id "com.jfrog.bintray" version "1.8.4"
+    id "com.github.jruby-gradle.base" version "1.6.0"
     id "java"
     id "checkstyle"
     id "jacoco"
+    id "com.github.johnrengelman.shadow" version "4.0.3"
 }
 import com.github.jrubygradle.JRubyExec
+
 repositories {
     mavenCentral()
     jcenter()
@@ -19,20 +21,36 @@ targetCompatibility = 1.8
 
 version = "0.2.8"
 
+// Relocate some packages that are being loaded by embulk
+shadowJar {
+    classifier = "fat"
+    exclude "org/embulk/plugin/**"
+
+    dependencies {
+        include dependency("com.google.guava:guava")
+        include dependency("com.google.cloud:google-cloud-storage")
+    }
+
+    relocate "com.google.common", "shadow.com.google.common"
+}
+
 dependencies {
-    compile  "org.embulk:embulk-core:0.9.11"
+    compile "org.embulk:embulk-core:0.9.11"
     provided "org.embulk:embulk-core:0.9.11"
 
-    compile 'com.google.cloud:google-cloud-storage:1.56.0'
+    compile "com.google.cloud:google-cloud-storage:1.56.0"
 
     testCompile "junit:junit:4.12"
     testCompile "org.embulk:embulk-core:0.9.11:tests"
     testCompile "org.embulk:embulk-standards:0.9.11"
 }
 
-task classpath(type: Copy, dependsOn: ["jar"]) {
+task classpath(type: Copy, dependsOn: ["jar", "shadowJar"]) {
     doFirst { file("classpath").deleteDir() }
-    from (configurations.runtime - configurations.provided + files(jar.archivePath))
+    from (configurations.runtime - configurations.provided
+            + configurations.shadow
+            - files(shadowJar.getIncludedDependencies())
+            + files(shadowJar.archivePath))
     into "classpath"
 }
 clean { delete 'classpath' }
@@ -60,7 +78,9 @@ task gem(type: JRubyExec, dependsOn: ["build", "gemspec", "classpath"]) {
     doLast { ant.move(file: "${project.name}-${project.version}.gem", todir: "pkg") }
 }
 
-task gemspec << { file("build/gemspec").write($/
+task gemspec {
+    doLast {
+        file("build/gemspec").write($/
 Gem::Specification.new do |spec|
   spec.name          = "${project.name}"
   spec.version       = "${project.version}"
@@ -79,4 +99,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'rake', ['>= 10.0']
 end
 /$)
+    }
 }

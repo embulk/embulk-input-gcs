@@ -3,7 +3,6 @@ package org.embulk.input.gcs;
 import org.embulk.config.Config;
 import org.embulk.config.ConfigDefault;
 import org.embulk.config.ConfigInject;
-import org.embulk.config.Task;
 import org.embulk.spi.BufferAllocator;
 import org.embulk.spi.unit.LocalFile;
 
@@ -11,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface PluginTask
-        extends Task, FileList.Task
+        extends org.embulk.config.Task, FileList.Task, RetryUtils.Task
 {
     @Config("bucket")
     String getBucket();
@@ -39,14 +38,9 @@ public interface PluginTask
     @Config("paths")
     @ConfigDefault("[]")
     List<String> getPathFiles();
-    void setPathFiles(List<String> files);
 
     FileList getFiles();
     void setFiles(FileList files);
-
-    @Config("max_connection_retry")
-    @ConfigDefault("10") // 10 times retry to connect GCS server if failed.
-    int getMaxConnectionRetry();
 
     @ConfigInject
     BufferAllocator getBufferAllocator();
