@@ -3,7 +3,6 @@ package org.embulk.input.gcs;
 import com.google.api.client.auth.oauth2.TokenErrorResponse;
 import com.google.api.client.auth.oauth2.TokenResponseException;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
-import com.google.api.gax.paging.Page;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.Storage;
 import org.embulk.config.Config;
@@ -108,27 +107,6 @@ class RetryUtils
         public void onGiveup(Exception firstException, Exception lastException)
         {
         }
-    }
-
-    /**
-     * Return bucket listing op that is ready for {@code withRetry}
-     *
-     * @param client
-     * @param bucket
-     * @param prefix
-     * @param lastPath
-     * @return
-     */
-    static DefaultRetryable<Page<Blob>> listing(Storage client, String bucket, String prefix, String lastPath)
-    {
-        return new DefaultRetryable<Page<Blob>>()
-        {
-            @Override
-            public Page<Blob> call()
-            {
-                return client.list(bucket, Storage.BlobListOption.prefix(prefix), Storage.BlobListOption.pageToken(lastPath));
-            }
-        };
     }
 
     /**
