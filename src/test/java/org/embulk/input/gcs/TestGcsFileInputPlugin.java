@@ -1,6 +1,5 @@
 package org.embulk.input.gcs;
 
-import com.google.cloud.storage.Storage;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -11,7 +10,6 @@ import org.embulk.config.ConfigSource;
 import org.embulk.config.TaskReport;
 import org.embulk.config.TaskSource;
 import org.embulk.spi.Exec;
-import org.embulk.spi.FileInputPlugin;
 import org.embulk.spi.FileInputRunner;
 import org.embulk.spi.InputPlugin;
 import org.embulk.spi.Schema;
@@ -23,8 +21,6 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.io.IOException;
-import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -34,19 +30,12 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeNotNull;
 
-import java.lang.reflect.InvocationTargetException;
-
-import java.lang.reflect.Method;
-
 public class TestGcsFileInputPlugin
 {
-    private static Optional<String> GCP_EMAIL;
-    private static Optional<String> GCP_P12_KEYFILE;
     private static Optional<String> GCP_JSON_KEYFILE;
     private static String GCP_BUCKET;
     private static String GCP_BUCKET_DIRECTORY;
     private static String GCP_PATH_PREFIX;
-    private static String GCP_APPLICATION_NAME;
     private static int MAX_CONNECTION_RETRY = 3;
     private FileInputRunner runner;
     private MockPageOutput output;
@@ -61,16 +50,12 @@ public class TestGcsFileInputPlugin
     @BeforeClass
     public static void initializeConstant()
     {
-        String gcpEmail = System.getenv("GCP_EMAIL");
-        String gcpP12KeyFile = System.getenv("GCP_P12_KEYFILE");
         String gcpJsonKeyFile = System.getenv("GCP_JSON_KEYFILE");
         String gcpBucket = System.getenv("GCP_BUCKET");
 
         // skip test cases, if environment variables are not set.
-        assumeNotNull(gcpEmail, gcpP12KeyFile, gcpJsonKeyFile, gcpBucket);
+        assumeNotNull(gcpJsonKeyFile, gcpBucket);
 
-        GCP_EMAIL = Optional.of(gcpEmail);
-        GCP_P12_KEYFILE = Optional.of(gcpP12KeyFile);
         GCP_JSON_KEYFILE = Optional.of(gcpJsonKeyFile);
         GCP_BUCKET = gcpBucket;
 
@@ -84,7 +69,7 @@ public class TestGcsFileInputPlugin
     private GcsFileInputPlugin plugin;
 
     @Before
-    public void createResources() throws GeneralSecurityException, NoSuchMethodException, IOException
+    public void createResources()
     {
         config = config();
         plugin = new GcsFileInputPlugin();
@@ -112,9 +97,6 @@ public class TestGcsFileInputPlugin
                 .set("bucket", GCP_BUCKET)
                 .set("paths", Arrays.asList("object1", "object2"))
                 .set("auth_method", "private_key")
-                .set("service_account_email", GCP_EMAIL)
-                .set("p12_keyfile", GCP_P12_KEYFILE)
-                .set("p12_keyfile_fullpath", GCP_P12_KEYFILE)
                 .set("parser", parserConfig(schemaConfig()));
 
         PluginTask task = config.loadConfig(PluginTask.class);
@@ -128,9 +110,6 @@ public class TestGcsFileInputPlugin
         ConfigSource config = Exec.newConfigSource()
                 .set("bucket", GCP_BUCKET)
                 .set("auth_method", "private_key")
-                .set("service_account_email", GCP_EMAIL)
-                .set("p12_keyfile", GCP_P12_KEYFILE)
-                .set("p12_keyfile_fullpath", GCP_P12_KEYFILE)
                 .set("parser", parserConfig(schemaConfig()));
 
         runner.transaction(config, new Control());
@@ -144,7 +123,6 @@ public class TestGcsFileInputPlugin
                 .set("bucket", GCP_BUCKET)
                 .set("path_prefix", "my-prefix")
                 .set("auth_method", "private_key")
-                .set("service_account_email", GCP_EMAIL)
                 .set("p12_keyfile", null)
                 .set("parser", parserConfig(schemaConfig()));
 
@@ -159,39 +137,6 @@ public class TestGcsFileInputPlugin
                 .set("bucket", GCP_BUCKET)
                 .set("path_prefix", "my-prefix")
                 .set("auth_method", "private_key")
-                .set("service_account_email", GCP_EMAIL)
-                .set("p12_keyfile", GCP_P12_KEYFILE)
-                .set("p12_keyfile_fullpath", GCP_P12_KEYFILE)
-                .set("parser", parserConfig(schemaConfig()));
-
-        runner.transaction(config, new Control());
-    }
-
-    // invalid p12keyfile when auth_method is private_key
-    @Test(expected = ConfigException.class)
-    public void checkDefaultValuesInvalidPrivateKey()
-    {
-        ConfigSource config = Exec.newConfigSource()
-                .set("bucket", GCP_BUCKET)
-                .set("path_prefix", "my-prefix")
-                .set("auth_method", "private_key")
-                .set("service_account_email", GCP_EMAIL)
-                .set("p12_keyfile", "invalid-key.p12")
-                .set("parser", parserConfig(schemaConfig()));
-
-        runner.transaction(config, new Control());
-    }
-
-    // json_keyfile is null when auth_method is json_key
-    @Test(expected = ConfigException.class)
-    public void checkDefaultValuesJsonKeyfileNull()
-    {
-        ConfigSource config = Exec.newConfigSource()
-                .set("bucket", GCP_BUCKET)
-                .set("path_prefix", "my-prefix")
-                .set("auth_method", "json_key")
-                .set("service_account_email", GCP_EMAIL)
-                .set("json_keyfile", null)
                 .set("parser", parserConfig(schemaConfig()));
 
         runner.transaction(config, new Control());
@@ -204,9 +149,6 @@ public class TestGcsFileInputPlugin
         ConfigSource config = Exec.newConfigSource()
                 .set("bucket", GCP_BUCKET)
                 .set("path_prefix", "my-prefix")
-                .set("auth_method", "json_key")
-                .set("service_account_email", GCP_EMAIL)
-                .set("json_keyfile", null)
                 .set("last_path", "ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc128")
                 .set("parser", parserConfig(schemaConfig()));
 
@@ -252,19 +194,12 @@ public class TestGcsFileInputPlugin
         );
 
         PluginTask task = config.loadConfig(PluginTask.class);
-        ConfigDiff configDiff = plugin.transaction(config, new FileInputPlugin.Control() {
-            @Override
-            public List<TaskReport> run(TaskSource taskSource, int taskCount)
-            {
-                assertEquals(2, taskCount);
-                return emptyTaskReports(taskCount);
-            }
+        ConfigDiff configDiff = plugin.transaction(config, (taskSource, taskCount) -> {
+            assertEquals(2, taskCount);
+            return emptyTaskReports(taskCount);
         });
 
-        Storage client = ServiceUtils.newClient(task.getJsonKeyfile());
-        FileList.Builder builder = new FileList.Builder(config);
-        GcsFileInput.listGcsFilesByPrefix(builder, client, GCP_BUCKET, GCP_PATH_PREFIX, Optional.empty());
-        FileList fileList = builder.build();
+        FileList fileList = GcsFileInput.listFiles(task);
         assertEquals(expected.get(0), fileList.get(0).get(0));
         assertEquals(expected.get(1), fileList.get(1).get(0));
         assertEquals(GCP_BUCKET_DIRECTORY + "sample_02.csv", configDiff.get(String.class, "last_path"));
@@ -284,10 +219,7 @@ public class TestGcsFileInputPlugin
             return emptyTaskReports(taskCount);
         });
 
-        Storage client = ServiceUtils.newClient(task.getJsonKeyfile());
-        FileList.Builder builder = new FileList.Builder(configWithPattern);
-        GcsFileInput.listGcsFilesByPrefix(builder, client, GCP_BUCKET, GCP_PATH_PREFIX, Optional.empty());
-        FileList fileList = builder.build();
+        FileList fileList = GcsFileInput.listFiles(task);
         assertEquals(expected.get(0), fileList.get(0).get(0));
         assertEquals(GCP_BUCKET_DIRECTORY + "sample_01.csv", configDiff.get(String.class, "last_path"));
     }
@@ -306,12 +238,13 @@ public class TestGcsFileInputPlugin
     @Test
     public void testListFilesByPrefixNonExistsBucket()
     {
-        PluginTask task = config.loadConfig(PluginTask.class);
+        PluginTask task = config
+                .set("bucket", "non-exists-bucket")
+                .set("path_prefix", "prefix")
+                .loadConfig(PluginTask.class);
         runner.transaction(config, new Control());
 
-        Storage client = ServiceUtils.newClient(task.getJsonKeyfile());
-        FileList.Builder builder = new FileList.Builder(config);
-        GcsFileInput.listGcsFilesByPrefix(builder, client, "non-exists-bucket", "prefix", Optional.empty()); // no errors happens
+        GcsFileInput.listFiles(task); // no errors happens
     }
 
     @Test
@@ -320,11 +253,7 @@ public class TestGcsFileInputPlugin
         ConfigSource config = Exec.newConfigSource()
                 .set("bucket", GCP_BUCKET)
                 .set("path_prefix", "/path/to/notfound")
-                .set("auth_method", "private_key")
-                .set("service_account_email", GCP_EMAIL)
-                .set("p12_keyfile", GCP_P12_KEYFILE)
                 .set("json_keyfile", GCP_JSON_KEYFILE)
-                .set("application_name", GCP_APPLICATION_NAME)
                 .set("last_path", "")
                 .set("parser", parserConfig(schemaConfig()));
 
@@ -339,12 +268,7 @@ public class TestGcsFileInputPlugin
         ConfigSource config = Exec.newConfigSource()
                 .set("bucket", GCP_BUCKET)
                 .set("paths", Arrays.asList())
-                .set("auth_method", "private_key")
-                .set("service_account_email", GCP_EMAIL)
-                .set("p12_keyfile", GCP_P12_KEYFILE)
                 .set("json_keyfile", GCP_JSON_KEYFILE)
-                .set("application_name", GCP_APPLICATION_NAME)
-                .set("last_path", "")
                 .set("parser", parserConfig(schemaConfig()));
 
         runner.transaction(config, new Control());
@@ -356,34 +280,27 @@ public class TestGcsFileInputPlugin
         ConfigSource config = Exec.newConfigSource()
                 .set("bucket", GCP_BUCKET)
                 .set("path_prefix", GCP_PATH_PREFIX)
-                .set("auth_method", "json_key")
-                .set("service_account_email", GCP_EMAIL)
                 .set("json_keyfile", GCP_JSON_KEYFILE)
                 .set("parser", parserConfig(schemaConfig()));
 
         PluginTask task = config.loadConfig(PluginTask.class);
         runner.transaction(config, new Control());
 
-        Storage client = ServiceUtils.newClient(task.getJsonKeyfile());
-        task.setFiles(GcsFileInput.listFiles(task, client));
+        task.setFiles(GcsFileInput.listFiles(task));
 
         assertRecords(config, output);
     }
 
     @Test
     public void testBase64()
-            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException
     {
-        Method method = GcsFileInput.class.getDeclaredMethod("base64Encode", String.class);
-        method.setAccessible(true);
-
-        assertEquals("CgFj", method.invoke(plugin, "c"));
-        assertEquals("CgJjMg==", method.invoke(plugin, "c2"));
-        assertEquals("Cgh0ZXN0LmNzdg==", method.invoke(plugin, "test.csv"));
-        assertEquals("ChZnY3MtdGVzdC9zYW1wbGVfMDEuY3N2", method.invoke(plugin, "gcs-test/sample_01.csv"));
+        assertEquals("CgFj", GcsFileInput.base64Encode("c"));
+        assertEquals("CgJjMg==", GcsFileInput.base64Encode("c2"));
+        assertEquals("Cgh0ZXN0LmNzdg==", GcsFileInput.base64Encode("test.csv"));
+        assertEquals("ChZnY3MtdGVzdC9zYW1wbGVfMDEuY3N2", GcsFileInput.base64Encode("gcs-test/sample_01.csv"));
         String params = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc127";
         String expected = "Cn9jY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjMTI3";
-        assertEquals(expected, method.invoke(plugin, params));
+        assertEquals(expected, GcsFileInput.base64Encode(params));
     }
 
     public ConfigSource config()
@@ -391,11 +308,8 @@ public class TestGcsFileInputPlugin
         return Exec.newConfigSource()
                 .set("bucket", GCP_BUCKET)
                 .set("path_prefix", GCP_PATH_PREFIX)
-                .set("auth_method", "private_key")
-                .set("service_account_email", GCP_EMAIL)
-                .set("p12_keyfile", GCP_P12_KEYFILE)
                 .set("json_keyfile", GCP_JSON_KEYFILE)
-                .set("application_name", GCP_APPLICATION_NAME)
+                .set("max_connection_retry", MAX_CONNECTION_RETRY)
                 .set("parser", parserConfig(schemaConfig()));
     }
 
