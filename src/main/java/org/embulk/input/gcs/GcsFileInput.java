@@ -43,7 +43,7 @@ public class GcsFileInput
 
     /**
      * Lists GCS filenames filtered by prefix.
-     * <p>
+     *
      * The resulting list does not include the file that's size == 0.
      */
     static FileList listFiles(PluginTask task)
