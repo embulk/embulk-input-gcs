@@ -3,9 +3,11 @@ package org.embulk.input.gcs;
 import com.google.api.gax.paging.Page;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.Storage;
+import com.google.cloud.storage.StorageException;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.io.BaseEncoding;
+import org.embulk.config.ConfigException;
 import org.embulk.config.TaskReport;
 import org.embulk.spi.Exec;
 import org.embulk.spi.TransactionalFileInput;
@@ -44,7 +46,7 @@ public class GcsFileInput
      */
     static FileList listFiles(PluginTask task)
     {
-        Storage client = ServiceUtils.newClient(task.getJsonKeyfile());
+        Storage client = AuthUtils.newClient(task);
         String bucket = task.getBucket();
 
         // @see https://cloud.google.com/storage/docs/json_api/v1/buckets/get
@@ -56,14 +58,24 @@ public class GcsFileInput
         String lastKey = task.getLastPath().isPresent() ? base64Encode(task.getLastPath().get()) : "";
         FileList.Builder builder = new FileList.Builder(task);
 
-        // @see https://cloud.google.com/storage/docs/json_api/v1/objects/list
-        Page<Blob> blobs = client.list(bucket, Storage.BlobListOption.prefix(prefix), Storage.BlobListOption.pageToken(lastKey));
-        for (Blob blob : blobs.iterateAll()) {
-            if (blob.getSize() > 0) {
-                builder.add(blob.getName(), blob.getSize());
+        try {
+            // @see https://cloud.google.com/storage/docs/json_api/v1/objects/list
+            Page<Blob> blobs = client.list(bucket, Storage.BlobListOption.prefix(prefix), Storage.BlobListOption.pageToken(lastKey));
+            for (Blob blob : blobs.iterateAll()) {
+                if (blob.getSize() > 0) {
+                    builder.add(blob.getName(), blob.getSize());
+                }
+                LOG.debug("filename: {}", blob.getName());
+                LOG.debug("updated: {}", blob.getUpdateTime());
             }
-            LOG.debug("filename: {}", blob.getName());
-            LOG.debug("updated: {}", blob.getUpdateTime());
+        }
+        catch (RuntimeException e) {
+            if ((e instanceof StorageException) && ((StorageException) e).getCode() == 400) {
+                throw new ConfigException(String.format("Files listing failed: bucket:%s, prefix:%s, last_path:%s", bucket, prefix, lastKey), e);
+            }
+
+            LOG.warn(String.format("Could not get file list from bucket:%s", bucket));
+            LOG.warn(e.getMessage());
         }
         return builder.build();
     }
