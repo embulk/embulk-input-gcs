@@ -43,6 +43,7 @@ dependencies {
     testCompile "junit:junit:4.12"
     testCompile "org.embulk:embulk-core:0.9.12:tests"
     testCompile "org.embulk:embulk-standards:0.9.12"
+    testCompile "org.mockito:mockito-core:2.18.3"
 }
 
 task classpath(type: Copy, dependsOn: ["jar", "shadowJar"]) {
