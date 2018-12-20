@@ -41,6 +41,7 @@ dependencies {
     compile "com.google.cloud:google-cloud-storage:1.56.0"
 
     testCompile "junit:junit:4.12"
+    testCompile "org.mockito:mockito-core:2.18.3"
     testCompile "org.embulk:embulk-core:0.9.11:tests"
     testCompile "org.embulk:embulk-standards:0.9.11"
 }
