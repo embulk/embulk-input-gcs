@@ -16,7 +16,7 @@ import java.util.function.Predicate;
 
 class RetryUtils
 {
-    interface Task
+    interface Task extends org.embulk.config.Task
     {
         @Config("max_connection_retry")
         @ConfigDefault("10") // 10 times retry to connect GCS server if failed.

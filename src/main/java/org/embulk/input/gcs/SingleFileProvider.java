@@ -26,7 +26,7 @@ public class SingleFileProvider
 
     SingleFileProvider(PluginTask task, int taskIndex)
     {
-        this.client = ServiceUtils.newClient(task.getJsonKeyfile());
+        this.client = AuthUtils.newClient(task);
         this.bucket = task.getBucket();
         this.iterator = task.getFiles().get(taskIndex).iterator();
         this.task = task;
