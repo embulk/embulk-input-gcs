@@ -471,11 +471,13 @@ public class TestGcsFileInputPlugin
 
     private static String getDirectory(String dir)
     {
-        if (dir != null && !dir.endsWith("/")) {
-            dir = dir + "/";
-        }
-        if (dir.startsWith("/")) {
-            dir = dir.replaceFirst("/", "");
+        if (dir != null) {
+            if (!dir.endsWith("/")) {
+                dir = dir + "/";
+            }
+            if (dir.startsWith("/")) {
+                dir = dir.replaceFirst("/", "");
+            }
         }
         return dir;
     }

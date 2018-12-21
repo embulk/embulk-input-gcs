@@ -15,6 +15,7 @@ import com.google.api.client.testing.http.MockHttpTransport;
 import com.google.api.client.testing.http.MockLowLevelHttpRequest;
 import com.google.api.client.testing.http.MockLowLevelHttpResponse;
 import com.google.cloud.storage.StorageException;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.embulk.EmbulkTestRuntime;
 import org.embulk.spi.Exec;
 import org.junit.Before;
@@ -34,6 +35,7 @@ import static org.junit.Assert.assertTrue;
 
 public class TestRetryUtils
 {
+    @SuppressFBWarnings("URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD")
     @Rule
     public EmbulkTestRuntime runtime = new EmbulkTestRuntime();
 

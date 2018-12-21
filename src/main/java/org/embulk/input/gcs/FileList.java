@@ -3,6 +3,7 @@ package org.embulk.input.gcs;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import org.embulk.config.Config;
 import org.embulk.config.ConfigDefault;
@@ -122,7 +123,7 @@ public class FileList
             return this;
         }
 
-        public Builder pathMatchPattern(String pattern)
+        public synchronized Builder pathMatchPattern(String pattern)
         {
             this.pathMatchPattern = Pattern.compile(pattern);
             return this;
@@ -168,7 +169,7 @@ public class FileList
             return true;
         }
 
-        public FileList build()
+        public synchronized FileList build()
         {
             try {
                 stream.close();
@@ -211,7 +212,7 @@ public class FileList
             @JsonProperty("tasks") List<List<Entry>> tasks,
             @JsonProperty("last") Optional<String> last)
     {
-        this.data = data;
+        this.data = data.clone();
         this.tasks = tasks;
         this.last = last;
     }
@@ -241,7 +242,7 @@ public class FileList
     @Deprecated
     public byte[] getData()
     {
-        return data;
+        return data.clone();
     }
 
     @JsonProperty("tasks")
@@ -258,7 +259,7 @@ public class FileList
         return last;
     }
 
-    private class EntryList
+    private static class EntryList
             extends AbstractList<String>
     {
         private final byte[] data;
@@ -313,10 +314,12 @@ public class FileList
         private byte[] readNext()
         {
             try {
-                stream.read(castBuffer.array());
-                int n = castBuffer.getInt(0);
-                byte[] b = new byte[n];  // here should be able to use a pooled buffer because read data is ignored if readNextString doesn't call this method
-                stream.read(b);
+                int n = stream.read(castBuffer.array());
+                Preconditions.checkArgument(n == castBuffer.capacity(), "Unexpected stream close, expecting %s bytes, but received %s bytes", castBuffer.capacity(), n);
+                int len = castBuffer.getInt(0);
+                byte[] b = new byte[len];  // here should be able to use a pooled buffer because read data is ignored if readNextString doesn't call this method
+                n = stream.read(b);
+                Preconditions.checkArgument(n == len, "Unexpected stream close, expecting %s bytes, but received %s bytes", castBuffer.capacity(), n);
 
                 current++;
 

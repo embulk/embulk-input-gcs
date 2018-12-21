@@ -90,7 +90,7 @@ public class GcsFileInput
 
         encoding = new byte[utf8.length + 2];
         encoding[0] = 0x0a;
-        encoding[1] = new Byte(String.valueOf(path.length()));
+        encoding[1] = Byte.valueOf(String.valueOf(path.length()));
         System.arraycopy(utf8, 0, encoding, 2, utf8.length);
 
         String s = BaseEncoding.base64().encode(encoding);

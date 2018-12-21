@@ -68,6 +68,9 @@ class AuthUtils
                 case private_key:
                     builder.setCredentials(fromP12(task));
                     break;
+                default:
+                    // compute_engine does not need credentials
+                    break;
             }
             // test client to verify auth
             final Storage client = builder.build().getService();
@@ -80,22 +83,23 @@ class AuthUtils
     }
 
     @VisibleForTesting
-    static Credentials fromP12(final PluginTask task) throws IOException, GeneralSecurityException
+    static Credentials fromP12(final Task task) throws IOException, GeneralSecurityException
     {
         final String path = task.getP12Keyfile().get().getPath().toString();
-        final InputStream p12InputStream = new FileInputStream(path);
-        final PrivateKey pk = SecurityUtils.loadPrivateKeyFromKeyStore(
-                SecurityUtils.getPkcs12KeyStore(), p12InputStream, "notasecret",
-                "privatekey", "notasecret");
-        return ServiceAccountCredentials.newBuilder()
-                .setClientEmail(task.getServiceAccountEmail().orElse(null))
-                .setPrivateKey(pk)
-                .setScopes(ImmutableList.of(StorageScopes.DEVSTORAGE_READ_ONLY))
-                .build();
+        try (final InputStream p12InputStream = new FileInputStream(path)) {
+            final PrivateKey pk = SecurityUtils.loadPrivateKeyFromKeyStore(
+                    SecurityUtils.getPkcs12KeyStore(), p12InputStream, "notasecret",
+                    "privatekey", "notasecret");
+            return ServiceAccountCredentials.newBuilder()
+                    .setClientEmail(task.getServiceAccountEmail().orElse(null))
+                    .setPrivateKey(pk)
+                    .setScopes(ImmutableList.of(StorageScopes.DEVSTORAGE_READ_ONLY))
+                    .build();
+        }
     }
 
     @VisibleForTesting
-    static Credentials fromJson(final PluginTask task) throws IOException
+    static Credentials fromJson(final Task task) throws IOException
     {
         final String path = task.getJsonKeyfile().map(f -> f.getPath().toString()).get();
         final InputStream jsonStream = new FileInputStream(path);

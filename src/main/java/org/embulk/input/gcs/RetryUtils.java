@@ -76,7 +76,7 @@ class RetryUtils
      *
      * @param <T>
      */
-    public static abstract class DefaultRetryable<T> implements RetryExecutor.Retryable<T>
+    public abstract static class DefaultRetryable<T> implements RetryExecutor.Retryable<T>
     {
         @Override
         public boolean isRetryableException(Exception exception)
