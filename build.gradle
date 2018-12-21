@@ -1,10 +1,11 @@
 plugins {
     id "com.jfrog.bintray" version "1.8.4"
     id "com.github.jruby-gradle.base" version "1.6.0"
+    id "com.github.johnrengelman.shadow" version "4.0.3"
+    id "com.github.spotbugs" version "1.6.8"
     id "java"
     id "checkstyle"
     id "jacoco"
-    id "com.github.johnrengelman.shadow" version "4.0.3"
 }
 import com.github.jrubygradle.JRubyExec
 
@@ -56,17 +57,24 @@ task classpath(type: Copy, dependsOn: ["jar", "shadowJar"]) {
 }
 clean { delete 'classpath' }
 
+test {
+    jvmArgs '-XX:MaxPermSize=128M', '-Xmx2048m'
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
+}
+
 checkstyle {
     configFile = file("${project.rootDir}/config/checkstyle/checkstyle.xml")
     toolVersion = '6.14.1'
 }
 checkstyleMain {
     configFile = file("${project.rootDir}/config/checkstyle/default.xml")
-    ignoreFailures = true
+    ignoreFailures = false
 }
 checkstyleTest {
     configFile = file("${project.rootDir}/config/checkstyle/default.xml")
-    ignoreFailures = true
+    ignoreFailures = false
 }
 task checkstyle(type: Checkstyle) {
     classpath = sourceSets.main.output + sourceSets.test.output
