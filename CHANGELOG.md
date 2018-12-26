@@ -1,3 +1,6 @@
+## 0.3.0 - 2018-12-26
+* [maintenance] Use file name output feature in Embulk core to show file name in cmdout [#37](https://github.com/embulk/embulk-input-gcs/pull/37)
+
 ## 0.2.8 - 2018-06-29
 * [maintenance] Improve retry logic to retry "400 Bad Request" "Invalid JWT: No valid verifier found for issuer" [#34](https://github.com/embulk/embulk-input-gcs/pull/34)
 
