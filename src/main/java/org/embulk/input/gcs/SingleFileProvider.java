@@ -2,14 +2,18 @@ package org.embulk.input.gcs;
 
 import com.google.cloud.ReadChannel;
 import com.google.cloud.storage.Storage;
+import org.embulk.spi.Exec;
 import org.embulk.spi.util.InputStreamFileInput;
 import org.embulk.spi.util.InputStreamFileInput.InputStreamWithHints;
 import org.embulk.spi.util.ResumableInputStream;
+import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.channels.Channels;
 import java.util.Iterator;
+
+import static java.lang.String.format;
 
 public class SingleFileProvider
         implements InputStreamFileInput.Provider
@@ -52,6 +56,7 @@ public class SingleFileProvider
     static class InputStreamReopener
             implements ResumableInputStream.Reopener
     {
+        private Logger logger = Exec.getLogger(getClass());
         private final Storage client;
         private final String bucket;
         private final String key;
@@ -66,6 +71,7 @@ public class SingleFileProvider
         @Override
         public InputStream reopen(long offset, Exception closedCause) throws IOException
         {
+            logger.warn(format("GCS read failed. Retrying GET request with %,d bytes offset", offset), closedCause);
             ReadChannel ch = client.get(bucket, key).reader();
             ch.seek(offset);
             return Channels.newInputStream(ch);
