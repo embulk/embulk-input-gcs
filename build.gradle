@@ -20,7 +20,7 @@ configurations {
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
-version = "0.3.0"
+version = "0.3.1"
 
 // Relocate Guava packages since it's incompatible with Guava's version from Embulk
 shadowJar {

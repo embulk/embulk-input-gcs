@@ -1,3 +1,7 @@
+## 0.3.1 - 2019-01-07
+* [maintenance] Updated Google Cloud Storage API Client Library from v1-rev59-1.21.0 to 1.56.0 [#40](https://github.com/embulk/embulk-input-gcs/pull/40)
+* [new feature] Refactor to use InputStream (to replace local file download)
+
 ## 0.3.0 - 2018-12-26
 * [maintenance] Use file name output feature in Embulk core to show file name in cmdout [#37](https://github.com/embulk/embulk-input-gcs/pull/37)
 
