@@ -1,6 +1,5 @@
 package org.embulk.input.gcs;
 
-import com.google.api.services.storage.Storage;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -11,7 +10,6 @@ import org.embulk.config.ConfigSource;
 import org.embulk.config.TaskReport;
 import org.embulk.config.TaskSource;
 import org.embulk.spi.Exec;
-import org.embulk.spi.FileInputPlugin;
 import org.embulk.spi.FileInputRunner;
 import org.embulk.spi.InputPlugin;
 import org.embulk.spi.Schema;
@@ -23,19 +21,14 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.io.IOException;
-import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeNotNull;
-
-import java.lang.reflect.InvocationTargetException;
-
-import java.lang.reflect.Method;
 
 public class TestGcsFileInputPlugin
 {
@@ -45,8 +38,7 @@ public class TestGcsFileInputPlugin
     private static String GCP_BUCKET;
     private static String GCP_BUCKET_DIRECTORY;
     private static String GCP_PATH_PREFIX;
-    private static String GCP_APPLICATION_NAME;
-    private static int MAX_CONNECTION_RETRY = 3;
+    private static String GCP_APPLICATION_NAME = "embulk-input-gcs";
     private FileInputRunner runner;
     private MockPageOutput output;
 
@@ -83,7 +75,7 @@ public class TestGcsFileInputPlugin
     private GcsFileInputPlugin plugin;
 
     @Before
-    public void createResources() throws GeneralSecurityException, NoSuchMethodException, IOException
+    public void createResources()
     {
         config = config();
         plugin = new GcsFileInputPlugin();
@@ -99,7 +91,7 @@ public class TestGcsFileInputPlugin
                 .set("path_prefix", "my-prefix");
 
         PluginTask task = config.loadConfig(PluginTask.class);
-        assertEquals(true, task.getIncremental());
+        assertTrue(task.getIncremental());
         assertEquals("private_key", task.getAuthMethod().toString());
         assertEquals("Embulk GCS input plugin", task.getApplicationName());
     }
@@ -215,22 +207,15 @@ public class TestGcsFileInputPlugin
 
     @Test
     public void testGcsClientCreateSuccessfully()
-            throws GeneralSecurityException, IOException, NoSuchMethodException,
-            IllegalAccessException, InvocationTargetException
     {
         PluginTask task = config().loadConfig(PluginTask.class);
-        runner.transaction(config, new Control());
-
-        Method method = GcsFileInputPlugin.class.getDeclaredMethod("newGcsAuth", PluginTask.class);
-        method.setAccessible(true);
-        GcsFileInput.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task)); // no errors happens
+        AuthUtils.newClient(task);
     }
 
     @Test(expected = ConfigException.class)
     public void testGcsClientCreateThrowConfigException()
-            throws GeneralSecurityException, IOException, NoSuchMethodException,
-            IllegalAccessException, InvocationTargetException
     {
+        // verify AuthUtils#newClient() to throws ConfigException for non-exists-bucket
         ConfigSource config = Exec.newConfigSource()
                 .set("bucket", "non-exists-bucket")
                 .set("path_prefix", "my-prefix")
@@ -240,11 +225,7 @@ public class TestGcsFileInputPlugin
                 .set("parser", parserConfig(schemaConfig()));
 
         PluginTask task = config.loadConfig(PluginTask.class);
-        runner.transaction(config, new Control());
-
-        Method method = GcsFileInputPlugin.class.getDeclaredMethod("newGcsAuth", PluginTask.class);
-        method.setAccessible(true);
-        GcsFileInput.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task));
+        AuthUtils.newClient(task);
     }
 
     @Test
@@ -254,14 +235,7 @@ public class TestGcsFileInputPlugin
         FileList.Builder builder = new FileList.Builder(config);
         builder.add("in/aa/a", 1);
         task.setFiles(builder.build());
-        ConfigDiff configDiff = plugin.resume(task.dump(), 0, new FileInputPlugin.Control()
-        {
-            @Override
-            public List<TaskReport> run(TaskSource taskSource, int taskCount)
-            {
-                return emptyTaskReports(taskCount);
-            }
-        });
+        ConfigDiff configDiff = plugin.resume(task.dump(), 0, (taskSource, taskCount) -> emptyTaskReports(taskCount));
         assertEquals("in/aa/a", configDiff.get(String.class, "last_path"));
     }
 
@@ -269,12 +243,11 @@ public class TestGcsFileInputPlugin
     public void testCleanup()
     {
         PluginTask task = config.loadConfig(PluginTask.class);
-        plugin.cleanup(task.dump(), 0, Lists.<TaskReport>newArrayList()); // no errors happens
+        plugin.cleanup(task.dump(), 0, Lists.newArrayList()); // no errors happens
     }
 
     @Test
     public void testListFilesByPrefix()
-            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException
     {
         List<String> expected = Arrays.asList(
                 GCP_BUCKET_DIRECTORY + "sample_01.csv",
@@ -282,21 +255,12 @@ public class TestGcsFileInputPlugin
         );
 
         PluginTask task = config.loadConfig(PluginTask.class);
-        ConfigDiff configDiff = plugin.transaction(config, new FileInputPlugin.Control() {
-            @Override
-            public List<TaskReport> run(TaskSource taskSource, int taskCount)
-            {
-                assertEquals(2, taskCount);
-                return emptyTaskReports(taskCount);
-            }
+        ConfigDiff configDiff = plugin.transaction(config, (taskSource, taskCount) -> {
+            assertEquals(2, taskCount);
+            return emptyTaskReports(taskCount);
         });
 
-        Method method = GcsFileInputPlugin.class.getDeclaredMethod("newGcsAuth", PluginTask.class);
-        method.setAccessible(true);
-        Storage client = GcsFileInput.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task));
-        FileList.Builder builder = new FileList.Builder(config);
-        GcsFileInput.listGcsFilesByPrefix(builder, client, GCP_BUCKET, GCP_PATH_PREFIX, Optional.empty());
-        FileList fileList = builder.build();
+        FileList fileList = GcsFileInput.listFiles(task);
         assertEquals(expected.get(0), fileList.get(0).get(0));
         assertEquals(expected.get(1), fileList.get(1).get(0));
         assertEquals(GCP_BUCKET_DIRECTORY + "sample_02.csv", configDiff.get(String.class, "last_path"));
@@ -304,7 +268,6 @@ public class TestGcsFileInputPlugin
 
     @Test
     public void testListFilesByPrefixWithPattern()
-            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException
     {
         List<String> expected = Arrays.asList(
                 GCP_BUCKET_DIRECTORY + "sample_01.csv"
@@ -312,27 +275,18 @@ public class TestGcsFileInputPlugin
 
         ConfigSource configWithPattern = config.deepCopy().set("path_match_pattern", "1");
         PluginTask task = configWithPattern.loadConfig(PluginTask.class);
-        ConfigDiff configDiff = plugin.transaction(configWithPattern, new FileInputPlugin.Control() {
-            @Override
-            public List<TaskReport> run(TaskSource taskSource, int taskCount)
-            {
-                assertEquals(1, taskCount);
-                return emptyTaskReports(taskCount);
-            }
+        ConfigDiff configDiff = plugin.transaction(configWithPattern, (taskSource, taskCount) -> {
+            assertEquals(1, taskCount);
+            return emptyTaskReports(taskCount);
         });
 
-        Method method = GcsFileInputPlugin.class.getDeclaredMethod("newGcsAuth", PluginTask.class);
-        method.setAccessible(true);
-        Storage client = GcsFileInput.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task));
-        FileList.Builder builder = new FileList.Builder(configWithPattern);
-        GcsFileInput.listGcsFilesByPrefix(builder, client, GCP_BUCKET, GCP_PATH_PREFIX, Optional.empty());
-        FileList fileList = builder.build();
+        FileList fileList = GcsFileInput.listFiles(task);
         assertEquals(expected.get(0), fileList.get(0).get(0));
         assertEquals(GCP_BUCKET_DIRECTORY + "sample_01.csv", configDiff.get(String.class, "last_path"));
     }
 
     @Test
-    public void testListFilesByPrefixIncrementalFalse() throws Exception
+    public void testListFilesByPrefixIncrementalFalse()
     {
         ConfigSource config = config().deepCopy()
                 .set("incremental", false);
@@ -342,22 +296,22 @@ public class TestGcsFileInputPlugin
         assertEquals("{}", configDiff.toString());
     }
 
-    @Test
+    @Test(expected = ConfigException.class)
     public void testListFilesByPrefixNonExistsBucket()
-            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException
     {
-        PluginTask task = config.loadConfig(PluginTask.class);
+        PluginTask task = config
+                .set("bucket", "non-exists-bucket")
+                .set("path_prefix", "prefix")
+                .loadConfig(PluginTask.class);
         runner.transaction(config, new Control());
 
-        Method method = GcsFileInputPlugin.class.getDeclaredMethod("newGcsAuth", PluginTask.class);
-        method.setAccessible(true);
-        Storage client = GcsFileInput.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task));
-        FileList.Builder builder = new FileList.Builder(config);
-        GcsFileInput.listGcsFilesByPrefix(builder, client, "non-exists-bucket", "prefix", Optional.empty()); // no errors happens
+        // after refactoring, GcsFileInput#listFiles() won't accept initialized client
+        // hence, this test will throw ConfigException
+        GcsFileInput.listFiles(task);
     }
 
     @Test
-    public void testNonExistingFilesWithPathPrefix() throws Exception
+    public void testNonExistingFilesWithPathPrefix()
     {
         ConfigSource config = Exec.newConfigSource()
                 .set("bucket", GCP_BUCKET)
@@ -394,7 +348,6 @@ public class TestGcsFileInputPlugin
 
     @Test
     public void testGcsFileInputByOpen()
-            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, IOException
     {
         ConfigSource config = Exec.newConfigSource()
                 .set("bucket", GCP_BUCKET)
@@ -407,31 +360,24 @@ public class TestGcsFileInputPlugin
         PluginTask task = config.loadConfig(PluginTask.class);
         runner.transaction(config, new Control());
 
-        Method method = GcsFileInput.class.getDeclaredMethod("newGcsAuth", PluginTask.class);
-        method.setAccessible(true);
-        Storage client = GcsFileInput.newGcsClient(task, (GcsAuthentication) method.invoke(plugin, task));
-        task.setFiles(GcsFileInput.listFiles(task, client));
+        task.setFiles(GcsFileInput.listFiles(task));
 
         assertRecords(config, output);
     }
 
     @Test
     public void testBase64()
-            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException
     {
-        Method method = GcsFileInput.class.getDeclaredMethod("base64Encode", String.class);
-        method.setAccessible(true);
-
-        assertEquals("CgFj", method.invoke(plugin, "c"));
-        assertEquals("CgJjMg==", method.invoke(plugin, "c2"));
-        assertEquals("Cgh0ZXN0LmNzdg==", method.invoke(plugin, "test.csv"));
-        assertEquals("ChZnY3MtdGVzdC9zYW1wbGVfMDEuY3N2", method.invoke(plugin, "gcs-test/sample_01.csv"));
+        assertEquals("CgFj", GcsFileInput.base64Encode("c"));
+        assertEquals("CgJjMg==", GcsFileInput.base64Encode("c2"));
+        assertEquals("Cgh0ZXN0LmNzdg==", GcsFileInput.base64Encode("test.csv"));
+        assertEquals("ChZnY3MtdGVzdC9zYW1wbGVfMDEuY3N2", GcsFileInput.base64Encode("gcs-test/sample_01.csv"));
         String params = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc127";
         String expected = "Cn9jY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjMTI3";
-        assertEquals(expected, method.invoke(plugin, params));
+        assertEquals(expected, GcsFileInput.base64Encode(params));
     }
 
-    public ConfigSource config()
+    private ConfigSource config()
     {
         return Exec.newConfigSource()
                 .set("bucket", GCP_BUCKET)
@@ -444,7 +390,7 @@ public class TestGcsFileInputPlugin
                 .set("parser", parserConfig(schemaConfig()));
     }
 
-    static List<TaskReport> emptyTaskReports(int taskCount)
+    private static List<TaskReport> emptyTaskReports(int taskCount)
     {
         ImmutableList.Builder<TaskReport> reports = new ImmutableList.Builder<>();
         for (int i = 0; i < taskCount; i++) {
@@ -525,11 +471,13 @@ public class TestGcsFileInputPlugin
 
     private static String getDirectory(String dir)
     {
-        if (dir != null && !dir.endsWith("/")) {
-            dir = dir + "/";
-        }
-        if (dir.startsWith("/")) {
-            dir = dir.replaceFirst("/", "");
+        if (dir != null) {
+            if (!dir.endsWith("/")) {
+                dir = dir + "/";
+            }
+            if (dir.startsWith("/")) {
+                dir = dir.replaceFirst("/", "");
+            }
         }
         return dir;
     }

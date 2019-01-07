@@ -1,11 +1,14 @@
 plugins {
-    id "com.jfrog.bintray" version "1.1"
-    id "com.github.jruby-gradle.base" version "0.1.5"
+    id "com.jfrog.bintray" version "1.8.4"
+    id "com.github.jruby-gradle.base" version "1.6.0"
+    id "com.github.johnrengelman.shadow" version "4.0.3"
+    id "com.github.spotbugs" version "1.6.8"
     id "java"
     id "checkstyle"
     id "jacoco"
 }
 import com.github.jrubygradle.JRubyExec
+
 repositories {
     mavenCentral()
     jcenter()
@@ -19,24 +22,47 @@ targetCompatibility = 1.8
 
 version = "0.3.0"
 
+// Relocate Guava packages since it's incompatible with Guava's version from Embulk
+shadowJar {
+    classifier = "shadow"
+    exclude "org/embulk/plugin/**"
+
+    dependencies {
+        include dependency("com.google.guava:guava")
+        include dependency("com.google.cloud:google-cloud-storage")
+    }
+
+    relocate "com.google.common", "embulk.gcs.com.google.common"
+}
+
 dependencies {
     compile  "org.embulk:embulk-core:0.9.12"
     provided "org.embulk:embulk-core:0.9.12"
 
-    compile "com.google.http-client:google-http-client-jackson2:1.21.0"
-    compile ("com.google.apis:google-api-services-storage:v1-rev59-1.21.0") {exclude module: "guava-jdk5"}
+    compile "com.google.cloud:google-cloud-storage:1.56.0"
 
     testCompile "junit:junit:4.12"
     testCompile "org.embulk:embulk-core:0.9.12:tests"
     testCompile "org.embulk:embulk-standards:0.9.12"
+    testCompile "org.mockito:mockito-core:2.18.3"
 }
 
-task classpath(type: Copy, dependsOn: ["jar"]) {
+task classpath(type: Copy, dependsOn: ["jar", "shadowJar"]) {
     doFirst { file("classpath").deleteDir() }
-    from (configurations.runtime - configurations.provided + files(jar.archivePath))
+    from (configurations.runtime - configurations.provided
+            + configurations.shadow
+            - files(shadowJar.getIncludedDependencies())
+            + files(shadowJar.archivePath))
     into "classpath"
 }
 clean { delete 'classpath' }
+
+test {
+    jvmArgs '-XX:MaxPermSize=128M', '-Xmx2048m'
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
+}
 
 checkstyle {
     configFile = file("${project.rootDir}/config/checkstyle/checkstyle.xml")
@@ -44,11 +70,11 @@ checkstyle {
 }
 checkstyleMain {
     configFile = file("${project.rootDir}/config/checkstyle/default.xml")
-    ignoreFailures = true
+    ignoreFailures = false
 }
 checkstyleTest {
     configFile = file("${project.rootDir}/config/checkstyle/default.xml")
-    ignoreFailures = true
+    ignoreFailures = false
 }
 task checkstyle(type: Checkstyle) {
     classpath = sourceSets.main.output + sourceSets.test.output
@@ -56,12 +82,14 @@ task checkstyle(type: Checkstyle) {
 }
 
 task gem(type: JRubyExec, dependsOn: ["build", "gemspec", "classpath"]) {
-    jrubyArgs "-rrubygems/gem_runner", "-eGem::GemRunner.new.run(ARGV)", "build"
-    script "build/gemspec"
+    script "gem"
+    scriptArgs "build", "build/gemspec"
     doLast { ant.move(file: "${project.name}-${project.version}.gem", todir: "pkg") }
 }
 
-task gemspec << { file("build/gemspec").write($/
+task gemspec {
+    doLast {
+        file("build/gemspec").write($/
 Gem::Specification.new do |spec|
   spec.name          = "${project.name}"
   spec.version       = "${project.version}"
@@ -80,4 +108,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'rake', ['>= 10.0']
 end
 /$)
+    }
 }
