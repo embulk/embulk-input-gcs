@@ -80,7 +80,7 @@ public class GcsFileInput
         return builder.build();
     }
 
-    // String nextToken = base64Encode(0x0a + 0x01~0x27 + filePath);
+    // String nextToken = base64Encode(0x0a + ASCII character according to utf8EncodeLength position+ filePath);
     @VisibleForTesting
     static String base64Encode(String path)
     {
@@ -88,9 +88,17 @@ public class GcsFileInput
         byte[] utf8 = path.getBytes(Charsets.UTF_8);
         LOG.debug("path string: {} ,path length:{} \" + ", path, utf8.length);
 
+        int utf8EncodeLength = utf8.length;
+        if (utf8EncodeLength >= 128) {
+            throw new ConfigException("Can't support last path encode length longer than 127. Please try to reduce the length");
+        }
+
         encoding = new byte[utf8.length + 2];
         encoding[0] = 0x0a;
-        encoding[1] = Byte.valueOf(String.valueOf(path.length()));
+
+        // for example: 60 -> '<'
+        char temp = (char) utf8EncodeLength;
+        encoding[1] = (byte) temp;
         System.arraycopy(utf8, 0, encoding, 2, utf8.length);
 
         String s = BaseEncoding.base64().encode(encoding);
