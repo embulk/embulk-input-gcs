@@ -357,7 +357,7 @@ public class TestGcsFileInputPlugin
                 .set("p12_keyfile", GCP_P12_KEYFILE)
                 .set("json_keyfile", GCP_JSON_KEYFILE)
                 .set("application_name", GCP_APPLICATION_NAME)
-                .set("last_path", "テストシフト表/日日日日日aaaaaaaaaaaaa日日日日日日日日日日日日日日日日怠怠怠怠怠怠怠チェック_01067csv.csv")
+                .set("last_path", "テストダミー/テストダミーテストダミーテストダミーテストダミーテストダミーテストダミーテストダミー.csv")
                 .set("parser", parserConfig(schemaConfig()));
 
         runner.transaction(config, new Control());
@@ -393,8 +393,8 @@ public class TestGcsFileInputPlugin
         String expected = "Cn9jY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjMTI3";
         assertEquals(expected, GcsFileInput.base64Encode(params));
 
-        params = "テストシフト表/怠怠チェッ.csv";
-        expected = "Cinjg4bjgrnjg4jjgrfjg5Xjg4jooagv5oCg5oCg44OB44Kn44ODLmNzdg==";
+        params = "テストダミー/テス123/テストダミー/テストダミ.csv";
+        expected = "CkPjg4bjgrnjg4jjg4Djg5/jg7wv44OG44K5MTIzL+ODhuOCueODiOODgOODn+ODvC/jg4bjgrnjg4jjg4Djg58uY3N2";
         assertEquals(expected, GcsFileInput.base64Encode(params));
     }
 
