@@ -90,7 +90,7 @@ public class GcsFileInput
 
         int utf8EncodeLength = utf8.length;
         if (utf8EncodeLength >= 128) {
-            throw new ConfigException("Can't support last path encode length longer than 127. Please try to reduce the length");
+            throw new ConfigException(String.format("last_path '%s' is too long to encode. Please try to reduce its length", path));
         }
 
         encoding = new byte[utf8.length + 2];
