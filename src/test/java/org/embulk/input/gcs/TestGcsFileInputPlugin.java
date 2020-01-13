@@ -346,6 +346,23 @@ public class TestGcsFileInputPlugin
         runner.transaction(config, new Control());
     }
 
+    @Test(expected = ConfigException.class)
+    public void testLastPathTooLong() throws Exception
+    {
+        ConfigSource config = Exec.newConfigSource()
+                .set("bucket", GCP_BUCKET)
+                .set("paths", Arrays.asList())
+                .set("auth_method", "private_key")
+                .set("service_account_email", GCP_EMAIL)
+                .set("p12_keyfile", GCP_P12_KEYFILE)
+                .set("json_keyfile", GCP_JSON_KEYFILE)
+                .set("application_name", GCP_APPLICATION_NAME)
+                .set("last_path", "テストダミー/テストダミーテストダミーテストダミーテストダミーテストダミーテストダミーテストダミー.csv")
+                .set("parser", parserConfig(schemaConfig()));
+
+        runner.transaction(config, new Control());
+    }
+
     @Test
     public void testGcsFileInputByOpen()
     {
@@ -374,6 +391,10 @@ public class TestGcsFileInputPlugin
         assertEquals("ChZnY3MtdGVzdC9zYW1wbGVfMDEuY3N2", GcsFileInput.base64Encode("gcs-test/sample_01.csv"));
         String params = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc127";
         String expected = "Cn9jY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjMTI3";
+        assertEquals(expected, GcsFileInput.base64Encode(params));
+
+        params = "テストダミー/テス123/テストダミー/テストダミ.csv";
+        expected = "CkPjg4bjgrnjg4jjg4Djg5/jg7wv44OG44K5MTIzL+ODhuOCueODiOODgOODn+ODvC/jg4bjgrnjg4jjg4Djg58uY3N2";
         assertEquals(expected, GcsFileInput.base64Encode(params));
     }
 
