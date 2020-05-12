@@ -1,4 +1,4 @@
-## 0.3.2 - 2020-01-13
+## 0.3.3 - 2020-04-12
 * [maintenance] Update validate error message for last_path [#49](https://github.com/embulk/embulk-input-gcs/pull/49)
 
 ## 0.3.2 - 2020-01-13
