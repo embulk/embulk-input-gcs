@@ -50,7 +50,7 @@ public class GcsFileInputPlugin
         // @see https://cloud.google.com/storage/docs/bucket-naming
         if (task.getLastPath().isPresent()) {
             if (task.getLastPath().get().length() >= 128) {
-                throw new ConfigException("last_path length is allowed between 1 and 1024 bytes");
+                throw new ConfigException("last_path length is allowed up to 128 characters");
             }
         }
 

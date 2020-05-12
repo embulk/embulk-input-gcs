@@ -1,4 +1,7 @@
 ## 0.3.2 - 2020-01-13
+* [maintenance] Update validate error message for last_path [#49](https://github.com/embulk/embulk-input-gcs/pull/49)
+
+## 0.3.2 - 2020-01-13
 * [maintenance] Improve base64encode method for last_path [#47](https://github.com/embulk/embulk-input-gcs/pull/47)
 
 ## 0.3.1 - 2019-01-07
