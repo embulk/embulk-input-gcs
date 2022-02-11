@@ -11,11 +11,11 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Mockito;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
+import java.util.Base64;
 import java.util.Optional;
 
 import static org.embulk.input.gcs.GcsFileInputPlugin.CONFIG_MAPPER;
@@ -42,7 +42,7 @@ public class TestAuthUtils
     public static void initializeConstant()
     {
         String gcpEmail = System.getenv("GCP_EMAIL");
-        String gcpP12KeyFile = System.getenv("GCP_P12_KEYFILE");
+        String gcpP12KeyFile = System.getenv("GCP_PRIVATE_KEYFILE");
         String gcpJsonKeyFile = System.getenv("GCP_JSON_KEYFILE");
         String gcpBucket = System.getenv("GCP_BUCKET");
 
@@ -140,12 +140,16 @@ public class TestAuthUtils
 
     private ConfigSource config()
     {
+        byte[] keyBytes = Base64.getDecoder().decode(GCP_P12_KEYFILE.get());
+        Optional<LocalFile> p12Key = Optional.of(LocalFile.ofContent(keyBytes));
+        Optional<LocalFile> jsonKey = Optional.of(LocalFile.ofContent(GCP_JSON_KEYFILE.get().getBytes()));
+
         return CONFIG_MAPPER_FACTORY.newConfigSource()
                 .set("bucket", GCP_BUCKET)
                 .set("auth_method", "private_key")
                 .set("service_account_email", GCP_EMAIL)
-                .set("p12_keyfile", GCP_P12_KEYFILE)
-                .set("json_keyfile", GCP_JSON_KEYFILE)
+                .set("p12_keyfile", p12Key)
+                .set("json_keyfile", jsonKey)
                 .set("application_name", GCP_APPLICATION_NAME);
     }
 }
