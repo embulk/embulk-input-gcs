@@ -176,7 +176,7 @@ gem {
     email = [ "satoshiakama@gmail.com" ]
     summary = "Google Cloud Storage input plugin for Embulk"
     homepage = "https://github.com/embulk/embulk-input-gcs"
-    licenses = [ "Apache-2.0" ]
+    licenses = [ "MIT" ]
 }
 
 gemPush {
