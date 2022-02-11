@@ -17,7 +17,6 @@ import com.google.api.client.testing.http.MockLowLevelHttpResponse;
 import com.google.cloud.storage.StorageException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.embulk.EmbulkTestRuntime;
-import org.embulk.spi.Exec;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -25,12 +24,12 @@ import org.mockito.Mockito;
 
 import java.io.IOException;
 
+import static org.embulk.input.gcs.GcsFileInputPlugin.CONFIG_MAPPER;
+import static org.embulk.input.gcs.GcsFileInputPlugin.CONFIG_MAPPER_FACTORY;
 import static org.embulk.input.gcs.RetryUtils.withRetry;
-import static org.hamcrest.core.IsInstanceOf.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 public class TestRetryUtils
@@ -106,13 +105,13 @@ public class TestRetryUtils
             // root cause -> RetryGiveUpException -> RuntimeException
             Throwable rootCause = e.getCause().getCause();
             assertEquals(expectMsg, rootCause.getMessage());
-            assertThat(rootCause, instanceOf(IllegalStateException.class));
+            assertTrue(rootCause instanceof IllegalStateException);
         }
     }
 
     private static RetryUtils.Task params()
     {
-        return Exec.newConfigSource().set("initial_retry_interval_millis", 1).loadConfig(RetryUtils.Task.class);
+        return CONFIG_MAPPER.map(CONFIG_MAPPER_FACTORY.newConfigSource().set("initial_retry_interval_millis", 1), RetryUtils.Task.class);
     }
 
     private static GoogleJsonResponseException fakeJsonException(final int code, final String message, final String content)

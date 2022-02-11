@@ -9,13 +9,13 @@ import org.embulk.config.ConfigException;
 import org.embulk.config.ConfigSource;
 import org.embulk.config.TaskReport;
 import org.embulk.config.TaskSource;
-import org.embulk.spi.Exec;
+import org.embulk.parser.csv.CsvParserPlugin;
 import org.embulk.spi.FileInputRunner;
 import org.embulk.spi.InputPlugin;
 import org.embulk.spi.Schema;
 import org.embulk.spi.TestPageBuilderReader.MockPageOutput;
 import org.embulk.spi.util.Pages;
-import org.embulk.standards.CsvParserPlugin;
+import org.embulk.util.config.units.LocalFile;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -23,9 +23,12 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 
+import static org.embulk.input.gcs.GcsFileInputPlugin.CONFIG_MAPPER;
+import static org.embulk.input.gcs.GcsFileInputPlugin.CONFIG_MAPPER_FACTORY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeNotNull;
@@ -86,11 +89,11 @@ public class TestGcsFileInputPlugin
     @Test
     public void checkDefaultValues()
     {
-        ConfigSource config = Exec.newConfigSource()
+        ConfigSource config = CONFIG_MAPPER_FACTORY.newConfigSource()
                 .set("bucket", GCP_BUCKET)
                 .set("path_prefix", "my-prefix");
 
-        PluginTask task = config.loadConfig(PluginTask.class);
+        PluginTask task = CONFIG_MAPPER.map(config, PluginTask.class);
         assertTrue(task.getIncremental());
         assertEquals("private_key", task.getAuthMethod().toString());
         assertEquals("Embulk GCS input plugin", task.getApplicationName());
@@ -100,7 +103,7 @@ public class TestGcsFileInputPlugin
     @Test
     public void checkDefaultValuesPathsSpecified()
     {
-        ConfigSource config = Exec.newConfigSource()
+        ConfigSource config = CONFIG_MAPPER_FACTORY.newConfigSource()
                 .set("bucket", GCP_BUCKET)
                 .set("paths", Arrays.asList("object1", "object2"))
                 .set("auth_method", "private_key")
@@ -109,7 +112,7 @@ public class TestGcsFileInputPlugin
                 .set("p12_keyfile_fullpath", GCP_P12_KEYFILE)
                 .set("parser", parserConfig(schemaConfig()));
 
-        PluginTask task = config.loadConfig(PluginTask.class);
+        PluginTask task = CONFIG_MAPPER.map(config, PluginTask.class);
         assertEquals(2, task.getPathFiles().size());
     }
 
@@ -117,7 +120,7 @@ public class TestGcsFileInputPlugin
     @Test(expected = ConfigException.class)
     public void checkDefaultValuesNoPathSpecified()
     {
-        ConfigSource config = Exec.newConfigSource()
+        ConfigSource config = CONFIG_MAPPER_FACTORY.newConfigSource()
                 .set("bucket", GCP_BUCKET)
                 .set("auth_method", "private_key")
                 .set("service_account_email", GCP_EMAIL)
@@ -132,7 +135,7 @@ public class TestGcsFileInputPlugin
     @Test(expected = ConfigException.class)
     public void checkDefaultValuesP12keyNull()
     {
-        ConfigSource config = Exec.newConfigSource()
+        ConfigSource config = CONFIG_MAPPER_FACTORY.newConfigSource()
                 .set("bucket", GCP_BUCKET)
                 .set("path_prefix", "my-prefix")
                 .set("auth_method", "private_key")
@@ -147,7 +150,7 @@ public class TestGcsFileInputPlugin
     @Test(expected = ConfigException.class)
     public void checkDefaultValuesConflictSetting()
     {
-        ConfigSource config = Exec.newConfigSource()
+        ConfigSource config = CONFIG_MAPPER_FACTORY.newConfigSource()
                 .set("bucket", GCP_BUCKET)
                 .set("path_prefix", "my-prefix")
                 .set("auth_method", "private_key")
@@ -163,7 +166,7 @@ public class TestGcsFileInputPlugin
     @Test(expected = ConfigException.class)
     public void checkDefaultValuesInvalidPrivateKey()
     {
-        ConfigSource config = Exec.newConfigSource()
+        ConfigSource config = CONFIG_MAPPER_FACTORY.newConfigSource()
                 .set("bucket", GCP_BUCKET)
                 .set("path_prefix", "my-prefix")
                 .set("auth_method", "private_key")
@@ -178,7 +181,7 @@ public class TestGcsFileInputPlugin
     @Test(expected = ConfigException.class)
     public void checkDefaultValuesJsonKeyfileNull()
     {
-        ConfigSource config = Exec.newConfigSource()
+        ConfigSource config = CONFIG_MAPPER_FACTORY.newConfigSource()
                 .set("bucket", GCP_BUCKET)
                 .set("path_prefix", "my-prefix")
                 .set("auth_method", "json_key")
@@ -193,7 +196,7 @@ public class TestGcsFileInputPlugin
     @Test(expected = ConfigException.class)
     public void checkDefaultValuesLongLastPath()
     {
-        ConfigSource config = Exec.newConfigSource()
+        ConfigSource config = CONFIG_MAPPER_FACTORY.newConfigSource()
                 .set("bucket", GCP_BUCKET)
                 .set("path_prefix", "my-prefix")
                 .set("auth_method", "json_key")
@@ -208,7 +211,7 @@ public class TestGcsFileInputPlugin
     @Test
     public void testGcsClientCreateSuccessfully()
     {
-        PluginTask task = config().loadConfig(PluginTask.class);
+        PluginTask task = CONFIG_MAPPER.map(config(), PluginTask.class);
         AuthUtils.newClient(task);
     }
 
@@ -216,7 +219,7 @@ public class TestGcsFileInputPlugin
     public void testGcsClientCreateThrowConfigException()
     {
         // verify AuthUtils#newClient() to throws ConfigException for non-exists-bucket
-        ConfigSource config = Exec.newConfigSource()
+        ConfigSource config = CONFIG_MAPPER_FACTORY.newConfigSource()
                 .set("bucket", "non-exists-bucket")
                 .set("path_prefix", "my-prefix")
                 .set("auth_method", "json_key")
@@ -224,14 +227,14 @@ public class TestGcsFileInputPlugin
                 .set("json_keyfile", GCP_JSON_KEYFILE)
                 .set("parser", parserConfig(schemaConfig()));
 
-        PluginTask task = config.loadConfig(PluginTask.class);
+        PluginTask task = CONFIG_MAPPER.map(config, PluginTask.class);
         AuthUtils.newClient(task);
     }
 
     @Test
     public void testResume()
     {
-        PluginTask task = config.loadConfig(PluginTask.class);
+        PluginTask task = CONFIG_MAPPER.map(config, PluginTask.class);
         FileList.Builder builder = new FileList.Builder(config);
         builder.add("in/aa/a", 1);
         task.setFiles(builder.build());
@@ -242,8 +245,8 @@ public class TestGcsFileInputPlugin
     @Test
     public void testCleanup()
     {
-        PluginTask task = config.loadConfig(PluginTask.class);
-        plugin.cleanup(task.dump(), 0, Lists.newArrayList()); // no errors happens
+        PluginTask task = CONFIG_MAPPER.map(config, PluginTask.class);
+        plugin.cleanup(task.toTaskSource(), 0, Lists.newArrayList()); // no errors happens
     }
 
     @Test
@@ -254,7 +257,7 @@ public class TestGcsFileInputPlugin
                 GCP_BUCKET_DIRECTORY + "sample_02.csv"
         );
 
-        PluginTask task = config.loadConfig(PluginTask.class);
+        PluginTask task = CONFIG_MAPPER.map(config, PluginTask.class);
         ConfigDiff configDiff = plugin.transaction(config, (taskSource, taskCount) -> {
             assertEquals(2, taskCount);
             return emptyTaskReports(taskCount);
@@ -299,10 +302,9 @@ public class TestGcsFileInputPlugin
     @Test(expected = ConfigException.class)
     public void testListFilesByPrefixNonExistsBucket()
     {
-        PluginTask task = config
+        PluginTask task = CONFIG_MAPPER.map(config
                 .set("bucket", "non-exists-bucket")
-                .set("path_prefix", "prefix")
-                .loadConfig(PluginTask.class);
+                .set("path_prefix", "prefix"), PluginTask.class);
         runner.transaction(config, new Control());
 
         // after refactoring, GcsFileInput#listFiles() won't accept initialized client
@@ -313,7 +315,7 @@ public class TestGcsFileInputPlugin
     @Test
     public void testNonExistingFilesWithPathPrefix()
     {
-        ConfigSource config = Exec.newConfigSource()
+        ConfigSource config = CONFIG_MAPPER_FACTORY.newConfigSource()
                 .set("bucket", GCP_BUCKET)
                 .set("path_prefix", "/path/to/notfound")
                 .set("auth_method", "private_key")
@@ -332,7 +334,7 @@ public class TestGcsFileInputPlugin
     @Test(expected = ConfigException.class)
     public void testNonExistingFilesWithPaths() throws Exception
     {
-        ConfigSource config = Exec.newConfigSource()
+        ConfigSource config = CONFIG_MAPPER_FACTORY.newConfigSource()
                 .set("bucket", GCP_BUCKET)
                 .set("paths", Arrays.asList())
                 .set("auth_method", "private_key")
@@ -349,7 +351,7 @@ public class TestGcsFileInputPlugin
     @Test(expected = ConfigException.class)
     public void testLastPathTooLong() throws Exception
     {
-        ConfigSource config = Exec.newConfigSource()
+        ConfigSource config = CONFIG_MAPPER_FACTORY.newConfigSource()
                 .set("bucket", GCP_BUCKET)
                 .set("paths", Arrays.asList())
                 .set("auth_method", "private_key")
@@ -366,7 +368,7 @@ public class TestGcsFileInputPlugin
     @Test
     public void testGcsFileInputByOpen()
     {
-        ConfigSource config = Exec.newConfigSource()
+        ConfigSource config = CONFIG_MAPPER_FACTORY.newConfigSource()
                 .set("bucket", GCP_BUCKET)
                 .set("path_prefix", GCP_PATH_PREFIX)
                 .set("auth_method", "json_key")
@@ -374,7 +376,7 @@ public class TestGcsFileInputPlugin
                 .set("json_keyfile", GCP_JSON_KEYFILE)
                 .set("parser", parserConfig(schemaConfig()));
 
-        PluginTask task = config.loadConfig(PluginTask.class);
+        PluginTask task = CONFIG_MAPPER.map(config, PluginTask.class);
         runner.transaction(config, new Control());
 
         task.setFiles(GcsFileInput.listFiles(task));
@@ -400,7 +402,7 @@ public class TestGcsFileInputPlugin
 
     private ConfigSource config()
     {
-        return Exec.newConfigSource()
+        return CONFIG_MAPPER_FACTORY.newConfigSource()
                 .set("bucket", GCP_BUCKET)
                 .set("path_prefix", GCP_PATH_PREFIX)
                 .set("auth_method", "private_key")
@@ -415,7 +417,7 @@ public class TestGcsFileInputPlugin
     {
         ImmutableList.Builder<TaskReport> reports = new ImmutableList.Builder<>();
         for (int i = 0; i < taskCount; i++) {
-            reports.add(Exec.newTaskReport());
+            reports.add(CONFIG_MAPPER_FACTORY.newTaskReport());
         }
         return reports.build();
     }
@@ -486,7 +488,8 @@ public class TestGcsFileInputPlugin
 
     private List<Object[]> getRecords(ConfigSource config, MockPageOutput output)
     {
-        Schema schema = config.getNested("parser").loadConfig(CsvParserPlugin.PluginTask.class).getSchemaConfig().toSchema();
+        CsvParserPlugin.PluginTask csvTask = CONFIG_MAPPER.map(config.getNested("parser"), CsvParserPlugin.PluginTask.class);
+        Schema schema = csvTask.getSchemaConfig().toSchema();
         return Pages.toObjects(schema, output.pages);
     }
 

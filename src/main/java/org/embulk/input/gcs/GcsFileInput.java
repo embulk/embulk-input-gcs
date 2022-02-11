@@ -11,18 +11,21 @@ import org.embulk.config.ConfigException;
 import org.embulk.config.TaskReport;
 import org.embulk.spi.Exec;
 import org.embulk.spi.TransactionalFileInput;
-import org.embulk.spi.util.InputStreamFileInput;
+import org.embulk.util.file.InputStreamFileInput;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import static org.embulk.input.gcs.GcsFileInputPlugin.CONFIG_MAPPER_FACTORY;
 
 public class GcsFileInput
         extends InputStreamFileInput
         implements TransactionalFileInput
 {
-    private static final Logger LOG = Exec.getLogger(org.embulk.input.gcs.GcsFileInput.class);
+    private static final Logger LOG = LoggerFactory.getLogger(org.embulk.input.gcs.GcsFileInput.class);
 
     GcsFileInput(PluginTask task, int taskIndex)
     {
-        super(task.getBufferAllocator(), new SingleFileProvider(task, taskIndex));
+        super(Exec.getBufferAllocator(), new SingleFileProvider(task, taskIndex));
     }
 
     public void abort()
@@ -31,7 +34,7 @@ public class GcsFileInput
 
     public TaskReport commit()
     {
-        return Exec.newTaskReport();
+        return CONFIG_MAPPER_FACTORY.newTaskReport();
     }
 
     @Override

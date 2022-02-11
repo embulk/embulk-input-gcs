@@ -5,18 +5,20 @@ import com.google.api.client.auth.oauth2.TokenResponseException;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.Storage;
-import org.embulk.config.Config;
-import org.embulk.config.ConfigDefault;
-import org.embulk.spi.Exec;
-import org.embulk.spi.util.RetryExecutor;
+import org.embulk.util.config.Config;
+import org.embulk.util.config.ConfigDefault;
+import org.embulk.util.retryhelper.RetryExecutor;
+import org.embulk.util.retryhelper.RetryGiveupException;
+import org.embulk.util.retryhelper.Retryable;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
 import java.util.function.Predicate;
 
 class RetryUtils
 {
-    interface Task extends org.embulk.config.Task
+    interface Task extends org.embulk.util.config.Task
     {
         @Config("max_connection_retry")
         @ConfigDefault("10") // 10 times retry to connect GCS server if failed.
@@ -35,7 +37,7 @@ class RetryUtils
     {
     }
 
-    private static final Logger LOG = Exec.getLogger(RetryUtils.class);
+    private static final Logger LOG = LoggerFactory.getLogger(RetryUtils.class);
 
     /**
      * A utility predicate to detect status code 4xx of `GoogleJsonResponseException`
@@ -76,7 +78,7 @@ class RetryUtils
      *
      * @param <T>
      */
-    public abstract static class DefaultRetryable<T> implements RetryExecutor.Retryable<T>
+    public abstract static class DefaultRetryable<T> implements Retryable<T>
     {
         @Override
         public boolean isRetryableException(Exception exception)
@@ -137,16 +139,17 @@ class RetryUtils
      * @param <T>
      * @return
      */
-    static <T> T withRetry(Task task, RetryExecutor.Retryable<T> op)
+    static <T> T withRetry(Task task, Retryable<T> op)
     {
         try {
-            return RetryExecutor.retryExecutor()
-                    .withInitialRetryWait(task.getInitialRetryIntervalMillis())
-                    .withMaxRetryWait(task.getMaximumRetryIntervalMillis())
+            return RetryExecutor.builder()
+                    .withInitialRetryWaitMillis(task.getInitialRetryIntervalMillis())
+                    .withMaxRetryWaitMillis(task.getMaximumRetryIntervalMillis())
                     .withRetryLimit(task.getMaxConnectionRetry())
+                    .build()
                     .runInterruptible(op);
         }
-        catch (RetryExecutor.RetryGiveupException | InterruptedException e) {
+        catch (RetryGiveupException | InterruptedException e) {
             throw new RuntimeException(e);
         }
     }

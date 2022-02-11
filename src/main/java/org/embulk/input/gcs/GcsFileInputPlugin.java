@@ -1,15 +1,16 @@
 package org.embulk.input.gcs;
 
-import com.google.common.base.Throwables;
 import org.embulk.config.ConfigDiff;
 import org.embulk.config.ConfigException;
 import org.embulk.config.ConfigSource;
 import org.embulk.config.TaskReport;
 import org.embulk.config.TaskSource;
-import org.embulk.spi.Exec;
 import org.embulk.spi.FileInputPlugin;
 import org.embulk.spi.TransactionalFileInput;
-import org.embulk.spi.unit.LocalFile;
+import org.embulk.util.config.ConfigMapper;
+import org.embulk.util.config.ConfigMapperFactory;
+import org.embulk.util.config.TaskMapper;
+import org.embulk.util.config.units.LocalFile;
 
 import java.io.IOException;
 import java.util.List;
@@ -18,11 +19,15 @@ import java.util.Optional;
 public class GcsFileInputPlugin
         implements FileInputPlugin
 {
+    public static final ConfigMapperFactory CONFIG_MAPPER_FACTORY = ConfigMapperFactory.builder()
+            .addDefaultModules().build();
+    public static final ConfigMapper CONFIG_MAPPER = CONFIG_MAPPER_FACTORY.createConfigMapper();
+    public static final TaskMapper TASK_MAPPER = CONFIG_MAPPER_FACTORY.createTaskMapper();
     @Override
     public ConfigDiff transaction(ConfigSource config,
                                   FileInputPlugin.Control control)
     {
-        PluginTask task = config.loadConfig(PluginTask.class);
+        PluginTask task = CONFIG_MAPPER.map(config, PluginTask.class);
 
         if (task.getP12KeyfileFullpath().isPresent()) {
             if (task.getP12Keyfile().isPresent()) {
@@ -32,7 +37,7 @@ public class GcsFileInputPlugin
                 task.setP12Keyfile(Optional.of(LocalFile.of(task.getP12KeyfileFullpath().get())));
             }
             catch (IOException ex) {
-                throw Throwables.propagate(ex);
+                throw new RuntimeException(ex);
             }
         }
 
@@ -69,7 +74,7 @@ public class GcsFileInputPlugin
             task.setFiles(builder.build());
         }
         // number of processors is same with number of files
-        return resume(task.dump(), task.getFiles().getTaskCount(), control);
+        return resume(task.toTaskSource(), task.getFiles().getTaskCount(), control);
     }
 
     @Override
@@ -77,11 +82,11 @@ public class GcsFileInputPlugin
                              int taskCount,
                              FileInputPlugin.Control control)
     {
-        PluginTask task = taskSource.loadTask(PluginTask.class);
+        PluginTask task = TASK_MAPPER.map(taskSource, PluginTask.class);
 
         control.run(taskSource, taskCount);
 
-        ConfigDiff configDiff = Exec.newConfigDiff();
+        ConfigDiff configDiff = CONFIG_MAPPER_FACTORY.newConfigDiff();
 
         if (task.getIncremental()) {
             configDiff.set("last_path", task.getFiles().getLastPath(task.getLastPath()));
@@ -100,7 +105,7 @@ public class GcsFileInputPlugin
     @Override
     public TransactionalFileInput open(TaskSource taskSource, int taskIndex)
     {
-        PluginTask task = taskSource.loadTask(PluginTask.class);
+        PluginTask task = TASK_MAPPER.map(taskSource, PluginTask.class);
         return new GcsFileInput(task, taskIndex);
     }
 }

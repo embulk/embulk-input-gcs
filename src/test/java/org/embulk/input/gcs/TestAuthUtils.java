@@ -5,8 +5,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.embulk.EmbulkTestRuntime;
 import org.embulk.config.ConfigException;
 import org.embulk.config.ConfigSource;
-import org.embulk.spi.Exec;
-import org.embulk.spi.unit.LocalFile;
+import org.embulk.util.config.units.LocalFile;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -19,8 +18,9 @@ import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.util.Optional;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.junit.Assert.assertThat;
+import static org.embulk.input.gcs.GcsFileInputPlugin.CONFIG_MAPPER;
+import static org.embulk.input.gcs.GcsFileInputPlugin.CONFIG_MAPPER_FACTORY;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeNotNull;
 
 public class TestAuthUtils
@@ -69,8 +69,8 @@ public class TestAuthUtils
     @Test
     public void testGetServiceAccountCredentialSuccess() throws IOException, GeneralSecurityException
     {
-        PluginTask task = config.loadConfig(PluginTask.class);
-        assertThat(AuthUtils.fromP12(task), instanceOf(Credentials.class));
+        PluginTask task = CONFIG_MAPPER.map(config, PluginTask.class);
+        assertTrue(AuthUtils.fromP12(task) instanceof Credentials);
     }
 
     @Test(expected = FileNotFoundException.class)
@@ -90,15 +90,14 @@ public class TestAuthUtils
     @Test
     public void testGetGcsClientUsingServiceAccountCredentialSuccess()
     {
-        PluginTask task = config.loadConfig(PluginTask.class);
-        assertThat(AuthUtils.newClient(task), instanceOf(com.google.cloud.storage.Storage.class));
+        PluginTask task = CONFIG_MAPPER.map(config, PluginTask.class);
+        assertTrue(AuthUtils.newClient(task)  instanceof com.google.cloud.storage.Storage);
     }
 
     @Test(expected = ConfigException.class)
     public void testGetGcsClientUsingServiceAccountCredentialThrowJsonResponseException()
     {
-        PluginTask task = config.set("bucket", "non-exists-bucket")
-                .loadConfig(PluginTask.class);
+        PluginTask task = CONFIG_MAPPER.map(config.set("bucket", "non-exists-bucket"), PluginTask.class);
         AuthUtils.newClient(task);
     }
 
@@ -106,8 +105,8 @@ public class TestAuthUtils
     public void testGetServiceAccountCredentialFromJsonFileSuccess()
             throws IOException
     {
-        PluginTask task = config.loadConfig(PluginTask.class);
-        assertThat(AuthUtils.fromJson(task), instanceOf(Credentials.class));
+        PluginTask task = CONFIG_MAPPER.map(config, PluginTask.class);
+        assertTrue(AuthUtils.fromJson(task) instanceof Credentials);
     }
 
     @Test(expected = FileNotFoundException.class)
@@ -127,22 +126,21 @@ public class TestAuthUtils
     @Test
     public void testGetServiceAccountCredentialFromJsonSuccess()
     {
-        PluginTask task = config.set("auth_method", AuthUtils.AuthMethod.json_key).loadConfig(PluginTask.class);
-        assertThat(AuthUtils.newClient(task), instanceOf(com.google.cloud.storage.Storage.class));
+        PluginTask task = CONFIG_MAPPER.map(config.set("auth_method", AuthUtils.AuthMethod.json_key), PluginTask.class);
+        assertTrue(AuthUtils.newClient(task)  instanceof com.google.cloud.storage.Storage);
     }
 
     @Test(expected = ConfigException.class)
     public void testGetServiceAccountCredentialFromJsonThrowGoogleJsonResponseException()
     {
-        PluginTask task = config.set("auth_method", AuthUtils.AuthMethod.json_key)
-                .set("bucket", "non-exists-bucket")
-                .loadConfig(PluginTask.class);
+        PluginTask task = CONFIG_MAPPER.map(config.set("auth_method", AuthUtils.AuthMethod.json_key)
+                .set("bucket", "non-exists-bucket"), PluginTask.class);
         AuthUtils.newClient(task);
     }
 
     private ConfigSource config()
     {
-        return Exec.newConfigSource()
+        return CONFIG_MAPPER_FACTORY.newConfigSource()
                 .set("bucket", GCP_BUCKET)
                 .set("auth_method", "private_key")
                 .set("service_account_email", GCP_EMAIL)
