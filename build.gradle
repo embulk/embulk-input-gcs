@@ -78,8 +78,7 @@ dependencies {
     testCompile "org.mockito:mockito-core:2.18.3"
     testCompile 'com.google.code.findbugs:annotations:3.0.0'
     testCompile "org.embulk:embulk-formatter-csv:0.10.31"
-    testCompile "org.embulk:embulk-input-file:0.10.31"
-    testCompile "org.embulk:embulk-parser-csv:0.10.31"
+    testCompile "org.embulk:embulk-output-file:0.10.31"
 }
 
 embulkPlugin {

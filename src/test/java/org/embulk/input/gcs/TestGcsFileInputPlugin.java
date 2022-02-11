@@ -12,11 +12,9 @@ import org.embulk.config.TaskReport;
 import org.embulk.config.TaskSource;
 import org.embulk.formatter.csv.CsvFormatterPlugin;
 import org.embulk.output.file.LocalFileOutputPlugin;
-import org.embulk.parser.csv.CsvParserPlugin;
 import org.embulk.spi.FileInputPlugin;
 import org.embulk.spi.FileOutputPlugin;
 import org.embulk.spi.FormatterPlugin;
-import org.embulk.spi.ParserPlugin;
 import org.embulk.spi.Schema;
 import org.embulk.test.TestingEmbulk;
 import org.embulk.util.config.units.LocalFile;
@@ -93,7 +91,6 @@ public class TestGcsFileInputPlugin
             .registerPlugin(FormatterPlugin.class, "csv", CsvFormatterPlugin.class)
             .registerPlugin(FileInputPlugin.class, "gcs", GcsFileInputPlugin.class)
             .registerPlugin(FileOutputPlugin.class, "file", LocalFileOutputPlugin.class)
-            .registerPlugin(ParserPlugin.class, "csv", CsvParserPlugin.class)
             .build();
 
     @Rule
@@ -255,7 +252,7 @@ public class TestGcsFileInputPlugin
         FileList.Builder builder = new FileList.Builder(config);
         builder.add("in/aa/a", 1);
         task.setFiles(builder.build());
-        ConfigDiff configDiff = plugin.resume(task.dump(), 0, (taskSource, taskCount) -> emptyTaskReports(taskCount));
+        ConfigDiff configDiff = plugin.resume(task.toTaskSource(), 0, (taskSource, taskCount) -> emptyTaskReports(taskCount));
         assertEquals("in/aa/a", configDiff.get(String.class, "last_path"));
     }
 
