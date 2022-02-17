@@ -3,7 +3,6 @@ package org.embulk.input.gcs;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
 import org.embulk.config.ConfigSource;
 import org.embulk.util.config.Config;
 import org.embulk.util.config.ConfigDefault;
@@ -314,11 +313,17 @@ public class FileList
         {
             try {
                 int n = stream.read(castBuffer.array());
-                Preconditions.checkArgument(n == castBuffer.capacity(), "Unexpected stream close, expecting %s bytes, but received %s bytes", castBuffer.capacity(), n);
+                if (n != castBuffer.capacity()) {
+                    throw new IllegalArgumentException(
+                            "Unexpected stream close, expecting " + castBuffer.capacity() + " bytes, but received " + n + " bytes");
+                }
                 int len = castBuffer.getInt(0);
                 byte[] b = new byte[len];  // here should be able to use a pooled buffer because read data is ignored if readNextString doesn't call this method
                 n = stream.read(b);
-                Preconditions.checkArgument(n == len, "Unexpected stream close, expecting %s bytes, but received %s bytes", castBuffer.capacity(), n);
+                if (n != len) {
+                    throw new IllegalArgumentException(
+                            "Unexpected stream close, expecting " + castBuffer.capacity() + " bytes, but received " + n + " bytes");
+                }
 
                 current++;
 

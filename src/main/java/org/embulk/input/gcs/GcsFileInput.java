@@ -4,9 +4,8 @@ import com.google.api.gax.paging.Page;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageException;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Charsets;
-import com.google.common.io.BaseEncoding;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import org.embulk.config.ConfigException;
 import org.embulk.config.TaskReport;
 import org.embulk.spi.Exec;
@@ -84,11 +83,10 @@ public class GcsFileInput
     }
 
     // String nextToken = base64Encode(0x0a + ASCII character according to utf8EncodeLength position+ filePath);
-    @VisibleForTesting
     static String base64Encode(String path)
     {
         byte[] encoding;
-        byte[] utf8 = path.getBytes(Charsets.UTF_8);
+        byte[] utf8 = path.getBytes(StandardCharsets.UTF_8);
         LOG.debug("path string: {} ,path length:{} \" + ", path, utf8.length);
 
         int utf8EncodeLength = utf8.length;
@@ -104,7 +102,7 @@ public class GcsFileInput
         encoding[1] = (byte) temp;
         System.arraycopy(utf8, 0, encoding, 2, utf8.length);
 
-        String s = BaseEncoding.base64().encode(encoding);
+        final String s = Base64.getEncoder().encodeToString(encoding);
         LOG.debug("last_path(base64 encoded): {}", s);
         return s;
     }
