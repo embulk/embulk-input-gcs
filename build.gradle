@@ -10,7 +10,6 @@ plugins {
 
 repositories {
     mavenCentral()
-    jcenter()
 }
 
 sourceCompatibility = 1.8
@@ -142,9 +141,9 @@ publishing {
                 }
 
                 scm {
-                    connection = "scm:git:git://github.com/embulk/embulk-output-gcs.git"
-                    developerConnection = "scm:git:git@github.com:embulk/embulk-output-gcs.git"
-                    url = "https://github.com/embulk/embulk-output-gcs"
+                    connection = "scm:git:git://github.com/embulk/embulk-input-gcs.git"
+                    developerConnection = "scm:git:git@github.com:embulk/embulk-input-gcs.git"
+                    url = "https://github.com/embulk/embulk-input-gcs"
                 }
             }
         }
