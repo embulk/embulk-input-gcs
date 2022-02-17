@@ -1,2 +1,2 @@
 rootProject.name = 'embulk-input-gcs'
-
+include "shadow-google-cloud-storage"
