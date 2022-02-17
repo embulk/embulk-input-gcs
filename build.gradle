@@ -96,15 +96,15 @@ javadoc {
 }
 
 jar {
-    from rootProject.file("LICENSE.txt")
+    from rootProject.file("LICENSE")
 }
 
 sourcesJar {
-    from rootProject.file("LICENSE.txt")
+    from rootProject.file("LICENSE")
 }
 
 javadocJar {
-    from rootProject.file("LICENSE.txt")
+    from rootProject.file("LICENSE")
 }
 
 publishing {
@@ -136,8 +136,8 @@ publishing {
                 licenses {
                     license {
                         // http://central.sonatype.org/pages/requirements.html#license-information
-                        name = "MIT License"
-                        url = "http://www.opensource.org/licenses/mit-license.php"
+                        name = "The Apache License, Version 2.0"
+                        url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
                     }
                 }
 
@@ -176,7 +176,7 @@ gem {
     email = [ "satoshiakama@gmail.com" ]
     summary = "Google Cloud Storage input plugin for Embulk"
     homepage = "https://github.com/embulk/embulk-input-gcs"
-    licenses = [ "MIT" ]
+    licenses = [ "Apache-2.0" ]
 }
 
 gemPush {
