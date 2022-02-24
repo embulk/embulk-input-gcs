@@ -1,66 +1,293 @@
 plugins {
-    id "com.jfrog.bintray" version "1.8.4"
-    id "com.github.jruby-gradle.base" version "1.6.0"
-    id "com.github.johnrengelman.shadow" version "4.0.3"
-    id "com.github.spotbugs" version "1.6.8"
     id "java"
     id "checkstyle"
     id "jacoco"
+    id "signing"
+    id "maven-publish"
+    id "org.embulk.embulk-plugins" version "0.4.2"
+    id "com.github.johnrengelman.shadow" version "5.2.0" apply false
 }
-import com.github.jrubygradle.JRubyExec
+
+configurations {
+    compileFlat
+    compile.extendsFrom compileFlat
+}
 
 repositories {
     mavenCentral()
-    jcenter()
-}
-configurations {
-    provided
 }
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
-version = "0.3.3"
+group = "org.embulk"
+version = "0.4.0-SNAPSHOT"
+description = "Reads files stored on Google Cloud Storage."
 
-// Relocate Guava packages since it's incompatible with Guava's version from Embulk
-shadowJar {
-    classifier = "shadow"
-    exclude "org/embulk/plugin/**"
-
-    dependencies {
-        include dependency("com.google.guava:guava")
-        include dependency("com.google.cloud:google-cloud-storage")
-    }
-
-    relocate "com.google.common", "embulk.gcs.com.google.common"
+tasks.withType(JavaCompile) {
+    options.compilerArgs << "-Xlint:deprecation" << "-Xlint:unchecked"
+    options.encoding = "UTF-8"
 }
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+def embulkVersion = '0.10.31'
 
 dependencies {
-    compile  "org.embulk:embulk-core:0.9.12"
-    provided "org.embulk:embulk-core:0.9.12"
+    compileOnly "org.embulk:embulk-api:$embulkVersion"
+    compileOnly "org.embulk:embulk-spi:$embulkVersion"
 
-    compile "com.google.cloud:google-cloud-storage:1.56.0"
+    compile('org.embulk:embulk-util-config:0.3.1') {
+        // Conflict with Embulk Core
+        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-annotations'
+        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-core'
+        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-databind'
+        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jdk8'
+        exclude group: 'javax.validation', module: 'validation-api'
+    }
+
+    // embulk-input-gcs:0.3.2 and earlier have been working with containing jackson-core:2.9.6 (no other Jackson sublibrarires)
+    // while embulk-core has had jackson-core/annotations/databind 2.6.7. Safer to have the combat-tested version as of now.
+    //
+    // It (and other Jackson sublibraries) will be replaced with the latest Jackson after Embulk v0.10.32 and later get popular.
+    compile "com.fasterxml.jackson.core:jackson-core:2.9.6"
+
+    compile 'com.fasterxml.jackson.core:jackson-annotations:2.6.7'
+    compile 'com.fasterxml.jackson.core:jackson-databind:2.6.7'
+    compile 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.6.7'
+    compile 'javax.validation:validation-api:1.1.0.Final'
+
+    compile "org.embulk:embulk-util-file:0.1.3"
+    compile('org.embulk:embulk-util-retryhelper:0.8.1') {
+        exclude group: 'org.slf4j', module: 'slf4j-api'
+    }
+
+    // The shadow JAR of "google-cloud-storage" is extracted in the plugin root project JAR.
+    compileFlat project(path: ":shadow-google-cloud-storage", configuration: "shadow")
+
+    // These are required from "google-cloud-storage", but adding in the plugin root project
+    // so that the licensing issues wouldn't be much complicated.
+    compile "joda-time:joda-time:2.9.2"
+    compile("org.apache.httpcomponents:httpclient:4.5.5") {
+        exclude group: "commons-logging", module: "commons-logging"
+    }
+    compile("org.apache.httpcomponents:httpcore:4.4.9") {
+        exclude group: "commons-logging", module: "commons-logging"
+    }
+    compile("commons-codec:commons-codec:1.10") {
+        exclude group: "commons-logging", module: "commons-logging"
+    }
+    compile "org.threeten:threetenbp:1.3.3"
+    compile "javax.annotation:javax.annotation-api:1.2"
+
+    // Instead of "commons-logging:commons-logging:1.2" that is required from "google-cloud-storage",
+    // we use "jcl-over-slf4j" because Embulk is based on SLF4J.
+    compile("org.slf4j:jcl-over-slf4j:1.7.12") {
+        // slf4j-api is in embulk-core / embulk-api.
+        exclude group: "org.slf4j", module: "slf4j-api"
+    }
 
     testCompile "junit:junit:4.12"
-    testCompile "org.embulk:embulk-core:0.9.12:tests"
-    testCompile "org.embulk:embulk-standards:0.9.12"
+    testCompile "org.embulk:embulk-core:$embulkVersion"
+    testCompile "org.embulk:embulk-core:$embulkVersion:tests"
+    testCompile "org.embulk:embulk-deps:$embulkVersion"
+    testCompile "org.embulk:embulk-junit4:$embulkVersion"
     testCompile "org.mockito:mockito-core:2.18.3"
+    testCompile 'com.google.code.findbugs:annotations:3.0.0'
+    testCompile "org.embulk:embulk-formatter-csv:0.10.36"
+    testCompile "org.embulk:embulk-output-file:0.10.36"
+    testCompile "org.embulk:embulk-parser-csv:0.10.36"
 }
 
-task classpath(type: Copy, dependsOn: ["jar", "shadowJar"]) {
-    doFirst { file("classpath").deleteDir() }
-    from (configurations.runtime - configurations.provided
-            + configurations.shadow
-            - files(shadowJar.getIncludedDependencies())
-            + files(shadowJar.archivePath))
-    into "classpath"
+embulkPlugin {
+    mainClass = "org.embulk.input.gcs.GcsFileInputPlugin"
+    category = "input"
+    type = "gcs"
 }
-clean { delete 'classpath' }
+
+javadoc {
+    options {
+        locale = 'en_US'
+        encoding = 'UTF-8'
+    }
+}
+
+jar {
+    from rootProject.file("LICENSE")
+    from rootProject.file("NOTICE")
+    from {
+        configurations.compileFlat.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
+
+sourcesJar {
+    from rootProject.file("LICENSE")
+    from rootProject.file("NOTICE")
+}
+
+javadocJar {
+    from rootProject.file("LICENSE")
+    from rootProject.file("NOTICE")
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = project.group
+            artifactId = project.name
+
+            from components.java
+
+            pom {  // https://central.sonatype.org/pages/requirements.html
+                packaging "jar"
+
+                name = project.name
+                description = project.description
+                url = "https://www.embulk.org/"
+
+                developers {
+                    developer {
+                        name = "Satoshi Akama"
+                        email = "satoshiakama@gmail.com"
+                    }
+                    developer {
+                        name = "Muga Nishizawa"
+                        email = "muga.nishizawa@gmail.com"
+                    }
+                    developer {
+                        name = "Naotoshi Seo"
+                        email = "sonots@gmail.com"
+                    }
+                    developer {
+                        name = "Robert Nguyen"
+                        email = "ng.hung83@gmail.com"
+                    }
+                    developer {
+                        name = "Hieu Duong"
+                        email = "duongminhhieu89@gmail.com"
+                    }
+                    developer {
+                        name = "John Luong"
+                        email = "jluong@treasure-data.com"
+                    }
+                    developer {
+                        name = "Dai MIKURUBE"
+                        email = "dmikurube@treasure-data.com"
+                    }
+
+                    // The pom.xml manipulation will not be required once we dispose the shadow.
+                    withXml {
+                        Node root = asNode()
+                        List dependencies = root.dependencies[0].children()
+
+                        // Remove "org.embulk:shadow-google-cloud-storage" in pom.xml.
+                        for (int i = dependencies.size() - 1; i >= 0; i--) {
+                            Node dependency = dependencies.get(i);
+                            if (dependency.groupId[0].text().equals("org.embulk") &&
+                                    dependency.artifactId[0].text().equals("shadow-google-cloud-storage")) {
+                                if (!dependencies.remove(dependency)) {
+                                    throw new GradleException("Failed to remove org.embulk:shadow-google-cloud-storage in pom.xml")
+                                }
+                            }
+                        }
+
+                        // Instead, add "com.google.cloud:google-cloud-storage:1.56.0" as "provided" in pom.xml.
+                        // It is not mandatory as a singular artifact, but better to represent it for other artifacts
+                        // which depend on "embulk-input-gcs".
+                        root.dependencies[0].appendNode("dependency").with {
+                            it.appendNode("groupId", "com.google.cloud")
+                            it.appendNode("artifactId", "google-cloud-storage")
+                            it.appendNode("version", "1.56.0")
+                            it.appendNode("scope", "provided")
+                            def exclusions = [
+                                [ "groupId": "joda-time", "artifactId": "joda-time" ],
+                                [ "groupId": "org.apache.httpcomponents", "artifactId": "httpclient" ],
+                                [ "groupId": "org.apache.httpcomponents", "artifactId": "httpcore" ],
+                                [ "groupId": "commons-logging", "artifactId": "commons-logging" ],
+                                [ "groupId": "commons-codec", "artifactId": "commons-codec" ],
+                                [ "groupId": "org.threeten", "artifactId": "threetenbp" ],
+                                [ "groupId": "com.fasterxml.jackson.core", "artifactId": "jackson-core" ],
+                                [ "groupId": "javax.annotation", "artifactId": "javax.annotation-api" ],
+                            ]
+                            Node exclusionsNode = it.appendNode("exclusions")
+                            exclusions.each {
+                                Node exclusion = new Node(exclusionsNode, "exclusion")
+                                exclusion.appendNode("groupId", it["groupId"])
+                                exclusion.appendNode("artifactId", it["artifactId"])
+                            }
+                        }
+                    }
+                }
+
+                licenses {
+                    license {
+                        // http://central.sonatype.org/pages/requirements.html#license-information
+                        name = "The Apache License, Version 2.0"
+                        url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
+                    }
+                }
+
+                scm {
+                    connection = "scm:git:git://github.com/embulk/embulk-input-gcs.git"
+                    developerConnection = "scm:git:git@github.com:embulk/embulk-input-gcs.git"
+                    url = "https://github.com/embulk/embulk-input-gcs"
+                }
+            }
+        }
+    }
+
+    repositories {
+        maven {  // publishMavenPublicationToMavenCentralRepository
+            name = "mavenCentral"
+            if (project.version.endsWith("-SNAPSHOT")) {
+                url "https://oss.sonatype.org/content/repositories/snapshots"
+            } else {
+                url "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+            }
+
+            credentials {
+                username = project.hasProperty("ossrhUsername") ? ossrhUsername : ""
+                password = project.hasProperty("ossrhPassword") ? ossrhPassword : ""
+            }
+        }
+    }
+}
+
+signing {
+    sign publishing.publications.maven
+}
+
+gem {
+    authors = [ "Satoshi Akama" ]
+    email = [ "satoshiakama@gmail.com" ]
+    summary = "Google Cloud Storage input plugin for Embulk"
+    homepage = "https://github.com/embulk/embulk-input-gcs"
+    licenses = [ "Apache-2.0" ]
+    from rootProject.file("LICENSE")
+    from rootProject.file("NOTICE_GEM")
+    rename ("NOTICE_GEM", "NOTICE")
+
+    // The contents of "shadow-google-cloud-storage-*.jar" should have already been mixed in "embulk-input-gcs-*.jar".
+    exclude { it.file.name.contains "shadow-google-cloud-storage" }
+}
+
+gemPush {
+    host = "https://rubygems.org"
+}
 
 test {
     jvmArgs '-XX:MaxPermSize=128M', '-Xmx2048m'
     testLogging {
-        events "passed", "skipped", "failed"
+        outputs.upToDateWhen { false }
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        showCauses = true
+        showExceptions = true
+        showStackTraces = true
+        showStandardStreams = true
+        events "passed", "skipped", "failed", "standardOut", "standardError"
     }
 }
 
@@ -79,34 +306,4 @@ checkstyleTest {
 task checkstyle(type: Checkstyle) {
     classpath = sourceSets.main.output + sourceSets.test.output
     source = sourceSets.main.allJava + sourceSets.test.allJava
-}
-
-task gem(type: JRubyExec, dependsOn: ["build", "gemspec", "classpath"]) {
-    script "gem"
-    scriptArgs "build", "build/gemspec"
-    doLast { ant.move(file: "${project.name}-${project.version}.gem", todir: "pkg") }
-}
-
-task gemspec {
-    doLast {
-        file("build/gemspec").write($/
-Gem::Specification.new do |spec|
-  spec.name          = "${project.name}"
-  spec.version       = "${project.version}"
-  spec.authors       = ["Satoshi Akama"]
-  spec.summary       = %[Google Cloud Storage input plugin for Embulk]
-  spec.description   = %[Reads files stored on Google Cloud Storage (Standard, Durable Reduced Availability or Nearline)]
-  spec.email         = ["satoshiakama@gmail.com"]
-  spec.licenses      = ["Apache-2.0"]
-  spec.homepage      = "https://github.com/embulk/embulk-input-gcs"
-
-  spec.files         = `git ls-files`.split("\n") + Dir["classpath/*.jar"]
-  spec.test_files    = spec.files.grep(%r"^(test|spec)/")
-  spec.require_paths = ["lib"]
-
-  spec.add_development_dependency 'bundler', ['~> 1.0']
-  spec.add_development_dependency 'rake', ['>= 10.0']
-end
-/$)
-    }
 }

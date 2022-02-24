@@ -4,25 +4,27 @@ import com.google.api.gax.paging.Page;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageException;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Charsets;
-import com.google.common.io.BaseEncoding;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import org.embulk.config.ConfigException;
 import org.embulk.config.TaskReport;
 import org.embulk.spi.Exec;
 import org.embulk.spi.TransactionalFileInput;
-import org.embulk.spi.util.InputStreamFileInput;
+import org.embulk.util.file.InputStreamFileInput;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import static org.embulk.input.gcs.GcsFileInputPlugin.CONFIG_MAPPER_FACTORY;
 
 public class GcsFileInput
         extends InputStreamFileInput
         implements TransactionalFileInput
 {
-    private static final Logger LOG = Exec.getLogger(org.embulk.input.gcs.GcsFileInput.class);
+    private static final Logger LOG = LoggerFactory.getLogger(org.embulk.input.gcs.GcsFileInput.class);
 
     GcsFileInput(PluginTask task, int taskIndex)
     {
-        super(task.getBufferAllocator(), new SingleFileProvider(task, taskIndex));
+        super(Exec.getBufferAllocator(), new SingleFileProvider(task, taskIndex));
     }
 
     public void abort()
@@ -31,7 +33,7 @@ public class GcsFileInput
 
     public TaskReport commit()
     {
-        return Exec.newTaskReport();
+        return CONFIG_MAPPER_FACTORY.newTaskReport();
     }
 
     @Override
@@ -81,11 +83,10 @@ public class GcsFileInput
     }
 
     // String nextToken = base64Encode(0x0a + ASCII character according to utf8EncodeLength position+ filePath);
-    @VisibleForTesting
     static String base64Encode(String path)
     {
         byte[] encoding;
-        byte[] utf8 = path.getBytes(Charsets.UTF_8);
+        byte[] utf8 = path.getBytes(StandardCharsets.UTF_8);
         LOG.debug("path string: {} ,path length:{} \" + ", path, utf8.length);
 
         int utf8EncodeLength = utf8.length;
@@ -101,7 +102,7 @@ public class GcsFileInput
         encoding[1] = (byte) temp;
         System.arraycopy(utf8, 0, encoding, 2, utf8.length);
 
-        String s = BaseEncoding.base64().encode(encoding);
+        final String s = Base64.getEncoder().encodeToString(encoding);
         LOG.debug("last_path(base64 encoded): {}", s);
         return s;
     }

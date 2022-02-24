@@ -3,11 +3,9 @@ package org.embulk.input.gcs;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
-import org.embulk.config.Config;
-import org.embulk.config.ConfigDefault;
 import org.embulk.config.ConfigSource;
+import org.embulk.util.config.Config;
+import org.embulk.util.config.ConfigDefault;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -107,7 +105,7 @@ public class FileList
                 stream = new BufferedOutputStream(new GZIPOutputStream(binary));
             }
             catch (IOException ex) {
-                throw Throwables.propagate(ex);
+                throw new RuntimeException(ex);
             }
         }
 
@@ -162,7 +160,7 @@ public class FileList
                 stream.write(data);
             }
             catch (IOException ex) {
-                throw Throwables.propagate(ex);
+                throw new RuntimeException(ex);
             }
 
             last = path;
@@ -175,7 +173,7 @@ public class FileList
                 stream.close();
             }
             catch (IOException ex) {
-                throw Throwables.propagate(ex);
+                throw new RuntimeException(ex);
             }
             return new FileList(binary.toByteArray(), getSplits(entries), Optional.ofNullable(last));
         }
@@ -277,7 +275,7 @@ public class FileList
                 this.stream = new BufferedInputStream(new GZIPInputStream(new ByteArrayInputStream(data)));
             }
             catch (IOException ex) {
-                throw Throwables.propagate(ex);
+                throw new RuntimeException(ex);
             }
             this.current = 0;
         }
@@ -293,7 +291,7 @@ public class FileList
                     stream = new BufferedInputStream(new GZIPInputStream(new ByteArrayInputStream(data)));
                 }
                 catch (IOException ex) {
-                    throw Throwables.propagate(ex);
+                    throw new RuntimeException(ex);
                 }
                 current = 0;
             }
@@ -315,18 +313,24 @@ public class FileList
         {
             try {
                 int n = stream.read(castBuffer.array());
-                Preconditions.checkArgument(n == castBuffer.capacity(), "Unexpected stream close, expecting %s bytes, but received %s bytes", castBuffer.capacity(), n);
+                if (n != castBuffer.capacity()) {
+                    throw new IllegalArgumentException(
+                            "Unexpected stream close, expecting " + castBuffer.capacity() + " bytes, but received " + n + " bytes");
+                }
                 int len = castBuffer.getInt(0);
                 byte[] b = new byte[len];  // here should be able to use a pooled buffer because read data is ignored if readNextString doesn't call this method
                 n = stream.read(b);
-                Preconditions.checkArgument(n == len, "Unexpected stream close, expecting %s bytes, but received %s bytes", castBuffer.capacity(), n);
+                if (n != len) {
+                    throw new IllegalArgumentException(
+                            "Unexpected stream close, expecting " + castBuffer.capacity() + " bytes, but received " + n + " bytes");
+                }
 
                 current++;
 
                 return b;
             }
             catch (IOException ex) {
-                throw Throwables.propagate(ex);
+                throw new RuntimeException(ex);
             }
         }
 

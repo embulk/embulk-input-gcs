@@ -7,18 +7,18 @@ import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageException;
 import com.google.cloud.storage.StorageOptions;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
-import org.embulk.config.Config;
-import org.embulk.config.ConfigDefault;
 import org.embulk.config.ConfigException;
-import org.embulk.spi.unit.LocalFile;
+import org.embulk.util.config.Config;
+import org.embulk.util.config.ConfigDefault;
+import org.embulk.util.config.units.LocalFile;
 
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.GeneralSecurityException;
 import java.security.PrivateKey;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Optional;
 
 class AuthUtils
@@ -82,7 +82,6 @@ class AuthUtils
         }
     }
 
-    @VisibleForTesting
     static Credentials fromP12(final Task task) throws IOException, GeneralSecurityException
     {
         final String path = task.getP12Keyfile().get().getPath().toString();
@@ -90,15 +89,16 @@ class AuthUtils
             final PrivateKey pk = SecurityUtils.loadPrivateKeyFromKeyStore(
                     SecurityUtils.getPkcs12KeyStore(), p12InputStream, "notasecret",
                     "privatekey", "notasecret");
+            final ArrayList<String> scopes = new ArrayList<>();
+            scopes.add(StorageScopes.DEVSTORAGE_READ_ONLY);
             return ServiceAccountCredentials.newBuilder()
                     .setClientEmail(task.getServiceAccountEmail().orElse(null))
                     .setPrivateKey(pk)
-                    .setScopes(ImmutableList.of(StorageScopes.DEVSTORAGE_READ_ONLY))
+                    .setScopes(Collections.unmodifiableList(scopes))
                     .build();
         }
     }
 
-    @VisibleForTesting
     static Credentials fromJson(final Task task) throws IOException
     {
         final String path = task.getJsonKeyfile().map(f -> f.getPath().toString()).get();

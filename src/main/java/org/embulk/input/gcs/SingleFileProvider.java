@@ -2,11 +2,10 @@ package org.embulk.input.gcs;
 
 import com.google.cloud.ReadChannel;
 import com.google.cloud.storage.Storage;
-import org.embulk.spi.Exec;
-import org.embulk.spi.util.InputStreamFileInput;
-import org.embulk.spi.util.InputStreamFileInput.InputStreamWithHints;
-import org.embulk.spi.util.ResumableInputStream;
+import org.embulk.util.file.InputStreamFileInput;
+import org.embulk.util.file.ResumableInputStream;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,7 +30,7 @@ public class SingleFileProvider
     }
 
     @Override
-    public InputStreamWithHints openNextWithHints()
+    public InputStreamFileInput.InputStreamWithHints openNextWithHints()
     {
         if (opened) {
             return null;
@@ -42,7 +41,7 @@ public class SingleFileProvider
         }
         String key = iterator.next();
         ReadChannel ch = client.get(bucket, key).reader();
-        return new InputStreamWithHints(
+        return new InputStreamFileInput.InputStreamWithHints(
                 new ResumableInputStream(Channels.newInputStream(ch), new InputStreamReopener(client, bucket, key)),
                 String.format("gcs://%s/%s", bucket, key)
         );
@@ -56,7 +55,7 @@ public class SingleFileProvider
     static class InputStreamReopener
             implements ResumableInputStream.Reopener
     {
-        private Logger logger = Exec.getLogger(getClass());
+        private Logger logger = LoggerFactory.getLogger(getClass());
         private final Storage client;
         private final String bucket;
         private final String key;
