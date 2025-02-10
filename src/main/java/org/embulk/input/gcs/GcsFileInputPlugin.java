@@ -11,6 +11,8 @@ import org.embulk.util.config.ConfigMapper;
 import org.embulk.util.config.ConfigMapperFactory;
 import org.embulk.util.config.TaskMapper;
 import org.embulk.util.config.units.LocalFile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
@@ -23,6 +25,7 @@ public class GcsFileInputPlugin
             .addDefaultModules().build();
     public static final ConfigMapper CONFIG_MAPPER = CONFIG_MAPPER_FACTORY.createConfigMapper();
     public static final TaskMapper TASK_MAPPER = CONFIG_MAPPER_FACTORY.createTaskMapper();
+    private static final Logger logger = LoggerFactory.getLogger(GcsFileInputPlugin.class);
     @Override
     public ConfigDiff transaction(ConfigSource config,
                                   FileInputPlugin.Control control)
@@ -62,6 +65,9 @@ public class GcsFileInputPlugin
         // list files recursively if path_prefix is specified
         if (task.getPathPrefix().isPresent()) {
             task.setFiles(GcsFileInput.listFiles(task));
+            if (task.getFiles().getTaskCount() == 0) {
+                logger.info("No file is found in the path(s) identified by path_prefix");
+            }
         }
         else {
             if (task.getPathFiles().isEmpty()) {
