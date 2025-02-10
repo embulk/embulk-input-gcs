@@ -25,7 +25,7 @@ public class GcsFileInputPlugin
             .addDefaultModules().build();
     public static final ConfigMapper CONFIG_MAPPER = CONFIG_MAPPER_FACTORY.createConfigMapper();
     public static final TaskMapper TASK_MAPPER = CONFIG_MAPPER_FACTORY.createTaskMapper();
-    private Logger logger = LoggerFactory.getLogger(GcsFileInputPlugin.class);
+    private static final Logger logger = LoggerFactory.getLogger(GcsFileInputPlugin.class);
     @Override
     public ConfigDiff transaction(ConfigSource config,
                                   FileInputPlugin.Control control)
@@ -66,7 +66,7 @@ public class GcsFileInputPlugin
         if (task.getPathPrefix().isPresent()) {
             task.setFiles(GcsFileInput.listFiles(task));
             if (task.getFiles().getTaskCount() == 0) {
-                logger.info("No file is found. Confirm path_prefix option is correct");
+                logger.info("No file is found in the path(s) identified by path_prefix");
             }
         }
         else {
