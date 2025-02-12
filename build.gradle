@@ -120,6 +120,19 @@ tasks.withType(GenerateModuleMetadata) {
     enabled = false
 }
 
+// A safer and strict alternative to: "dependencies" (and "dependencies --write-locks")
+//
+// This task fails explicitly when the specified dependency is not available.
+// In contrast, "dependencies (--write-locks)" does not fail even when a part the dependencies are unavailable.
+//
+// https://docs.gradle.org/8.7/userguide/dependency_locking.html#generating_and_updating_dependency_locks
+task checkDependencies {
+    notCompatibleWithConfigurationCache("The task \"checkDependencies\" filters configurations at execution time.")
+    doLast {
+        configurations.findAll { it.canBeResolved }.each { it.resolve() }
+    }
+}
+
 publishing {
     publications {
         maven(MavenPublication) {
@@ -127,6 +140,8 @@ publishing {
             artifactId = project.name
 
             from components.java
+            // javadocJar and sourcesJar are added by java.withJavadocJar() and java.withSourcesJar() above.
+            // See: https://docs.gradle.org/current/javadoc/org/gradle/api/plugins/JavaPluginExtension.html
 
             pom {  // https://central.sonatype.org/pages/requirements.html
                 packaging "jar"
@@ -171,6 +186,7 @@ publishing {
                         // http://central.sonatype.org/pages/requirements.html#license-information
                         name = "The Apache License, Version 2.0"
                         url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
+                        distribution = "repo"
                     }
                 }
 
@@ -201,6 +217,10 @@ publishing {
 }
 
 signing {
+    if (project.hasProperty("signingKey") && project.hasProperty("signingPassword")) {
+        logger.lifecycle("Signing with an in-memory key.")
+        useInMemoryPgpKeys(signingKey, signingPassword)
+    }
     sign publishing.publications.maven
 }
 
