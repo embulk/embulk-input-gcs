@@ -154,7 +154,7 @@ publishing {
                     }
                     developer {
                         name = "Dai MIKURUBE"
-                        email = "dmikurube@treasure-data.com"
+                        email = "dmikurube@acm.org"
                     }
                 }
 
@@ -205,9 +205,6 @@ gem {
     from rootProject.file("LICENSE")
     from rootProject.file("NOTICE_GEM")
     rename ("NOTICE_GEM", "NOTICE")
-
-    // The contents of "shadow-google-cloud-storage-*.jar" should have already been mixed in "embulk-input-gcs-*.jar".
-    exclude { it.file.name.contains "shadow-google-cloud-storage" }
 }
 
 gemPush {
