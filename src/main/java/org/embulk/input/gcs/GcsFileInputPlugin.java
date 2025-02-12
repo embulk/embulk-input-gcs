@@ -1,5 +1,8 @@
 package org.embulk.input.gcs;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Optional;
 import org.embulk.config.ConfigDiff;
 import org.embulk.config.ConfigException;
 import org.embulk.config.ConfigSource;
@@ -14,22 +17,14 @@ import org.embulk.util.config.units.LocalFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Optional;
-
-public class GcsFileInputPlugin
-        implements FileInputPlugin
-{
-    public static final ConfigMapperFactory CONFIG_MAPPER_FACTORY = ConfigMapperFactory.builder()
-            .addDefaultModules().build();
+public class GcsFileInputPlugin implements FileInputPlugin {
+    public static final ConfigMapperFactory CONFIG_MAPPER_FACTORY = ConfigMapperFactory.builder().addDefaultModules().build();
     public static final ConfigMapper CONFIG_MAPPER = CONFIG_MAPPER_FACTORY.createConfigMapper();
     public static final TaskMapper TASK_MAPPER = CONFIG_MAPPER_FACTORY.createTaskMapper();
     private static final Logger logger = LoggerFactory.getLogger(GcsFileInputPlugin.class);
+
     @Override
-    public ConfigDiff transaction(ConfigSource config,
-                                  FileInputPlugin.Control control)
-    {
+    public ConfigDiff transaction(final ConfigSource config, final FileInputPlugin.Control control) {
         PluginTask task = CONFIG_MAPPER.map(config, PluginTask.class);
 
         if (task.getP12KeyfileFullpath().isPresent()) {
@@ -38,8 +33,7 @@ public class GcsFileInputPlugin
             }
             try {
                 task.setP12Keyfile(Optional.of(LocalFile.of(task.getP12KeyfileFullpath().get())));
-            }
-            catch (IOException ex) {
+            } catch (final IOException ex) {
                 throw new RuntimeException(ex);
             }
         }
@@ -48,8 +42,7 @@ public class GcsFileInputPlugin
             if (!task.getJsonKeyfile().isPresent()) {
                 throw new ConfigException("If auth_method is json_key, you have to set json_keyfile");
             }
-        }
-        else if (AuthUtils.AuthMethod.private_key.equals(task.getAuthMethod())) {
+        } else if (AuthUtils.AuthMethod.private_key.equals(task.getAuthMethod())) {
             if (!task.getP12Keyfile().isPresent() || !task.getServiceAccountEmail().isPresent()) {
                 throw new ConfigException("If auth_method is private_key, you have to set both service_account_email and p12_keyfile");
             }
@@ -68,8 +61,7 @@ public class GcsFileInputPlugin
             if (task.getFiles().getTaskCount() == 0) {
                 logger.info("No file is found in the path(s) identified by path_prefix");
             }
-        }
-        else {
+        } else {
             if (task.getPathFiles().isEmpty()) {
                 throw new ConfigException("No file is found. Confirm paths option isn't empty");
             }
@@ -84,10 +76,10 @@ public class GcsFileInputPlugin
     }
 
     @Override
-    public ConfigDiff resume(TaskSource taskSource,
-                             int taskCount,
-                             FileInputPlugin.Control control)
-    {
+    public ConfigDiff resume(
+            final TaskSource taskSource,
+            final int taskCount,
+            final FileInputPlugin.Control control) {
         PluginTask task = TASK_MAPPER.map(taskSource, PluginTask.class);
 
         control.run(taskSource, taskCount);
@@ -102,15 +94,14 @@ public class GcsFileInputPlugin
     }
 
     @Override
-    public void cleanup(TaskSource taskSource,
-                        int taskCount,
-                        List<TaskReport> successTaskReports)
-    {
+    public void cleanup(
+            final TaskSource taskSource,
+            final int taskCount,
+            final List<TaskReport> successTaskReports) {
     }
 
     @Override
-    public TransactionalFileInput open(TaskSource taskSource, int taskIndex)
-    {
+    public TransactionalFileInput open(final TaskSource taskSource, final int taskIndex) {
         PluginTask task = TASK_MAPPER.map(taskSource, PluginTask.class);
         return new GcsFileInput(task, taskIndex);
     }

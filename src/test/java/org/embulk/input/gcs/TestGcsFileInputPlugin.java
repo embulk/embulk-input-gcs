@@ -1,8 +1,26 @@
 package org.embulk.input.gcs;
 
+import static org.embulk.input.gcs.GcsFileInputPlugin.CONFIG_MAPPER;
+import static org.embulk.input.gcs.GcsFileInputPlugin.CONFIG_MAPPER_FACTORY;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeNotNull;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.List;
+import java.util.Optional;
+import java.util.Properties;
 import org.embulk.EmbulkSystemProperties;
 import org.embulk.config.ConfigDiff;
 import org.embulk.config.ConfigException;
@@ -25,27 +43,7 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.List;
-import java.util.Optional;
-import java.util.Properties;
-
-import static org.embulk.input.gcs.GcsFileInputPlugin.CONFIG_MAPPER;
-import static org.embulk.input.gcs.GcsFileInputPlugin.CONFIG_MAPPER_FACTORY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeNotNull;
-
-public class TestGcsFileInputPlugin
-{
+public class TestGcsFileInputPlugin {
     private static Optional<String> GCP_EMAIL;
     private static Optional<String> GCP_P12_KEYFILE;
     private static Optional<String> GCP_JSON_KEYFILE;
@@ -60,6 +58,7 @@ public class TestGcsFileInputPlugin
         properties.setProperty("default_guess_plugins", "gzip,bzip2,json,csv");
         EMBULK_SYSTEM_PROPERTIES = EmbulkSystemProperties.of(properties);
     }
+
     /*
      * This test case requires environment variables
      *   GCP_EMAIL
@@ -68,8 +67,7 @@ public class TestGcsFileInputPlugin
      *   GCP_BUCKET
      */
     @BeforeClass
-    public static void initializeConstant()
-    {
+    public static void initializeConstant() {
         String gcpEmail = System.getenv("GCP_EMAIL");
         String gcpP12KeyFile = System.getenv("GCP_PRIVATE_KEYFILE");
         String gcpJsonKeyFile = System.getenv("GCP_JSON_KEYFILE");
@@ -102,15 +100,13 @@ public class TestGcsFileInputPlugin
     private GcsFileInputPlugin plugin;
 
     @Before
-    public void createResources()
-    {
+    public void createResources() {
         config = config();
         plugin = new GcsFileInputPlugin();
     }
 
     @Test
-    public void checkDefaultValues()
-    {
+    public void checkDefaultValues() {
         ConfigSource config = CONFIG_MAPPER_FACTORY.newConfigSource()
                 .set("bucket", GCP_BUCKET)
                 .set("path_prefix", "my-prefix");
@@ -123,8 +119,7 @@ public class TestGcsFileInputPlugin
 
     // paths are set
     @Test
-    public void checkDefaultValuesPathsSpecified()
-    {
+    public void checkDefaultValuesPathsSpecified() {
         ConfigSource config = CONFIG_MAPPER_FACTORY.newConfigSource()
                 .set("bucket", GCP_BUCKET)
                 .set("paths", Arrays.asList("object1", "object2"))
@@ -138,8 +133,7 @@ public class TestGcsFileInputPlugin
 
     // both path_prefix and paths are not set
     @Test(expected = ConfigException.class)
-    public void checkDefaultValuesNoPathSpecified()
-    {
+    public void checkDefaultValuesNoPathSpecified() {
         ConfigSource config = CONFIG_MAPPER_FACTORY.newConfigSource()
                 .set("bucket", GCP_BUCKET)
                 .set("auth_method", "private_key")
@@ -153,8 +147,7 @@ public class TestGcsFileInputPlugin
 
     // p12_keyfile is null when auth_method is private_key
     @Test(expected = ConfigException.class)
-    public void checkDefaultValuesP12keyNull()
-    {
+    public void checkDefaultValuesP12keyNull() {
         ConfigSource config = CONFIG_MAPPER_FACTORY.newConfigSource()
                 .set("bucket", GCP_BUCKET)
                 .set("path_prefix", "my-prefix")
@@ -167,8 +160,7 @@ public class TestGcsFileInputPlugin
 
     // both p12_keyfile and p12_keyfile_fullpath set
     @Test(expected = ConfigException.class)
-    public void checkDefaultValuesConflictSetting()
-    {
+    public void checkDefaultValuesConflictSetting() {
         ConfigSource config = CONFIG_MAPPER_FACTORY.newConfigSource()
                 .set("bucket", GCP_BUCKET)
                 .set("path_prefix", "my-prefix")
@@ -182,8 +174,7 @@ public class TestGcsFileInputPlugin
 
     // invalid p12keyfile when auth_method is private_key
     @Test(expected = ConfigException.class)
-    public void checkDefaultValuesInvalidPrivateKey()
-    {
+    public void checkDefaultValuesInvalidPrivateKey() {
         ConfigSource config = CONFIG_MAPPER_FACTORY.newConfigSource()
                 .set("bucket", GCP_BUCKET)
                 .set("path_prefix", "my-prefix")
@@ -197,8 +188,7 @@ public class TestGcsFileInputPlugin
 
     // json_keyfile is null when auth_method is json_key
     @Test(expected = ConfigException.class)
-    public void checkDefaultValuesJsonKeyfileNull()
-    {
+    public void checkDefaultValuesJsonKeyfileNull() {
         ConfigSource config = CONFIG_MAPPER_FACTORY.newConfigSource()
                 .set("bucket", GCP_BUCKET)
                 .set("path_prefix", "my-prefix")
@@ -212,8 +202,7 @@ public class TestGcsFileInputPlugin
 
     // last_path length is too long
     @Test(expected = ConfigException.class)
-    public void checkDefaultValuesLongLastPath()
-    {
+    public void checkDefaultValuesLongLastPath() {
         ConfigSource config = CONFIG_MAPPER_FACTORY.newConfigSource()
                 .set("bucket", GCP_BUCKET)
                 .set("path_prefix", "my-prefix")
@@ -227,15 +216,13 @@ public class TestGcsFileInputPlugin
     }
 
     @Test
-    public void testGcsClientCreateSuccessfully()
-    {
+    public void testGcsClientCreateSuccessfully() {
         PluginTask task = CONFIG_MAPPER.map(config(), PluginTask.class);
         AuthUtils.newClient(task);
     }
 
     @Test(expected = ConfigException.class)
-    public void testGcsClientCreateThrowConfigException()
-    {
+    public void testGcsClientCreateThrowConfigException() {
         // verify AuthUtils#newClient() to throws ConfigException for non-exists-bucket
         ConfigSource config = CONFIG_MAPPER_FACTORY.newConfigSource()
                 .set("bucket", "non-exists-bucket")
@@ -249,8 +236,7 @@ public class TestGcsFileInputPlugin
     }
 
     @Test
-    public void testResume()
-    {
+    public void testResume() {
         PluginTask task = CONFIG_MAPPER.map(config, PluginTask.class);
         FileList.Builder builder = new FileList.Builder(config);
         builder.add("in/aa/a", 1);
@@ -260,15 +246,13 @@ public class TestGcsFileInputPlugin
     }
 
     @Test
-    public void testCleanup()
-    {
+    public void testCleanup() {
         PluginTask task = CONFIG_MAPPER.map(config, PluginTask.class);
         plugin.cleanup(task.toTaskSource(), 0, Lists.newArrayList()); // no errors happens
     }
 
     @Test
-    public void testListFilesByPrefix()
-    {
+    public void testListFilesByPrefix() {
         List<String> expected = Arrays.asList(
                 GCP_BUCKET_DIRECTORY + "sample_01.csv",
                 GCP_BUCKET_DIRECTORY + "sample_02.csv"
@@ -287,8 +271,7 @@ public class TestGcsFileInputPlugin
     }
 
     @Test
-    public void testListFilesByPrefixWithPattern()
-    {
+    public void testListFilesByPrefixWithPattern() {
         List<String> expected = Arrays.asList(
                 GCP_BUCKET_DIRECTORY + "sample_01.csv"
         );
@@ -306,8 +289,7 @@ public class TestGcsFileInputPlugin
     }
 
     @Test
-    public void testListFilesByPrefixIncrementalFalse()
-    {
+    public void testListFilesByPrefixIncrementalFalse() {
         ConfigSource config = config().deepCopy()
                 .set("incremental", false);
 
@@ -317,8 +299,7 @@ public class TestGcsFileInputPlugin
     }
 
     @Test(expected = ConfigException.class)
-    public void testListFilesByPrefixNonExistsBucket()
-    {
+    public void testListFilesByPrefixNonExistsBucket() {
         PluginTask task = CONFIG_MAPPER.map(config
                 .set("bucket", "non-exists-bucket")
                 .set("path_prefix", "prefix"), PluginTask.class);
@@ -330,8 +311,7 @@ public class TestGcsFileInputPlugin
     }
 
     @Test
-    public void testNonExistingFilesWithPathPrefix()
-    {
+    public void testNonExistingFilesWithPathPrefix() {
         ConfigSource config = CONFIG_MAPPER_FACTORY.newConfigSource()
                 .set("bucket", GCP_BUCKET)
                 .set("path_prefix", "/path/to/notfound")
@@ -347,8 +327,7 @@ public class TestGcsFileInputPlugin
     }
 
     @Test(expected = ConfigException.class)
-    public void testNonExistingFilesWithPaths() throws Exception
-    {
+    public void testNonExistingFilesWithPaths() throws Exception {
         ConfigSource config = CONFIG_MAPPER_FACTORY.newConfigSource()
                 .set("bucket", GCP_BUCKET)
                 .set("paths", Arrays.asList())
@@ -362,8 +341,7 @@ public class TestGcsFileInputPlugin
     }
 
     @Test(expected = ConfigException.class)
-    public void testLastPathTooLong() throws Exception
-    {
+    public void testLastPathTooLong() throws Exception {
         ConfigSource config = CONFIG_MAPPER_FACTORY.newConfigSource()
                 .set("bucket", GCP_BUCKET)
                 .set("paths", Arrays.asList())
@@ -393,9 +371,9 @@ public class TestGcsFileInputPlugin
         assertRecords(tempFile);
     }
 
+    @SuppressWarnings("checkstyle:LineLength")
     @Test
-    public void testBase64()
-    {
+    public void testBase64() {
         assertEquals("CgFj", GcsFileInput.base64Encode("c"));
         assertEquals("CgJjMg==", GcsFileInput.base64Encode("c2"));
         assertEquals("Cgh0ZXN0LmNzdg==", GcsFileInput.base64Encode("test.csv"));
@@ -409,8 +387,7 @@ public class TestGcsFileInputPlugin
         assertEquals(expected, GcsFileInput.base64Encode(params));
     }
 
-    private ConfigSource config()
-    {
+    private ConfigSource config() {
         ConfigSource config = CONFIG_MAPPER_FACTORY.newConfigSource()
                 .set("bucket", GCP_BUCKET)
                 .set("path_prefix", GCP_PATH_PREFIX)
@@ -422,8 +399,7 @@ public class TestGcsFileInputPlugin
         return config;
     }
 
-    private static List<TaskReport> emptyTaskReports(int taskCount)
-    {
+    private static List<TaskReport> emptyTaskReports(final int taskCount) {
         ImmutableList.Builder<TaskReport> reports = new ImmutableList.Builder<>();
         for (int i = 0; i < taskCount; i++) {
             reports.add(CONFIG_MAPPER_FACTORY.newTaskReport());
@@ -431,17 +407,14 @@ public class TestGcsFileInputPlugin
         return reports.build();
     }
 
-    private class Control
-            implements FileInputPlugin.Control
-    {
+    private class Control implements FileInputPlugin.Control {
         @Override
         public List<TaskReport> run(TaskSource taskSource, int taskCount) {
             return ImmutableList.of(CONFIG_MAPPER_FACTORY.newTaskReport());
         }
     }
 
-    private ImmutableMap<String, Object> parserConfig(ImmutableList<Object> schemaConfig)
-    {
+    private ImmutableMap<String, Object> parserConfig(ImmutableList<Object> schemaConfig) {
         ImmutableMap.Builder<String, Object> builder = new ImmutableMap.Builder<>();
         builder.put("type", "csv");
         builder.put("newline", "CRLF");
@@ -456,8 +429,7 @@ public class TestGcsFileInputPlugin
         return builder.build();
     }
 
-    private ImmutableList<Object> schemaConfig()
-    {
+    private ImmutableList<Object> schemaConfig() {
         ImmutableList.Builder<Object> builder = new ImmutableList.Builder<>();
         builder.add(ImmutableMap.of("name", "id", "type", "long"));
         builder.add(ImmutableMap.of("name", "account", "type", "long"));
@@ -477,27 +449,27 @@ public class TestGcsFileInputPlugin
             records.add(record);
         }
         assertEquals(8, records.size());
-        {
-            String[] record = records.get(0);
-            assertEquals("1", record[0]);
-            assertEquals("32864", record[1]);
-            assertEquals("2015-01-27 19:23:49.000000 +0000", record[2]);
-            assertEquals("2015-01-27 00:00:00.000000 +0000", record[3]);
-            assertEquals("embulk", record[4]);
-        }
 
-        {
-            Object[] record = records.get(1);
-            assertEquals("2", record[0]);
-            assertEquals("14824", record[1]);
-            assertEquals("2015-01-27 19:01:23.000000 +0000", record[2].toString());
-            assertEquals("2015-01-27 00:00:00.000000 +0000", record[3].toString());
-            assertEquals("embulk jruby", record[4]);
-        }
+            {
+                final String[] record = records.get(0);
+                assertEquals("1", record[0]);
+                assertEquals("32864", record[1]);
+                assertEquals("2015-01-27 19:23:49.000000 +0000", record[2]);
+                assertEquals("2015-01-27 00:00:00.000000 +0000", record[3]);
+                assertEquals("embulk", record[4]);
+            }
+
+            {
+                final Object[] record = records.get(1);
+                assertEquals("2", record[0]);
+                assertEquals("14824", record[1]);
+                assertEquals("2015-01-27 19:01:23.000000 +0000", record[2].toString());
+                assertEquals("2015-01-27 00:00:00.000000 +0000", record[3].toString());
+                assertEquals("embulk jruby", record[4]);
+            }
     }
 
-    private static String getDirectory(String dir)
-    {
+    private static String getDirectory(String dir) {
         if (dir != null) {
             if (!dir.endsWith("/")) {
                 dir = dir + "/";
@@ -509,8 +481,7 @@ public class TestGcsFileInputPlugin
         return dir;
     }
 
-    private ConfigSource setKeys(ConfigSource configSource)
-    {
+    private ConfigSource setKeys(final ConfigSource configSource) {
         byte[] keyBytes = Base64.getDecoder().decode(GCP_P12_KEYFILE.get());
         Optional<LocalFile> p12Key = Optional.of(LocalFile.ofContent(keyBytes));
         Optional<LocalFile> jsonKey = Optional.of(LocalFile.ofContent(GCP_JSON_KEYFILE.get().getBytes()));

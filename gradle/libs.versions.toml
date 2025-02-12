@@ -23,6 +23,8 @@ embulk-formatter-csv = "0.10.36"
 embulk-output-file = "0.10.36"
 embulk-parser-csv = "0.10.36"
 
+checkstyle = "9.3"
+
 [libraries]
 
 embulk-spi = { group = "org.embulk", name = "embulk-spi", version.ref = "embulk-spi" }

@@ -31,10 +31,8 @@
   <module name="SuppressionFilter">
     <property name="file" value="${org.checkstyle.google.suppressionfilter.config}"
            default="checkstyle-suppressions.xml" />
-    <property name="optional" value="false"/>
+    <property name="optional" value="true"/>
   </module>
-
-  <module name="SuppressWarningsFilter"/>
 
   <!-- Checks for whitespace                               -->
   <!-- See http://checkstyle.org/config_whitespace.html -->
@@ -44,7 +42,7 @@
 
   <module name="LineLength">
     <property name="fileExtensions" value="java"/>
-    <property name="max" value="180"/>
+    <property name="max" value="100"/>
     <property name="ignorePattern" value="^package.*|^import.*|a href|href|http://|https://|ftp://"/>
   </module>
 
@@ -248,12 +246,12 @@
              value="GenericWhitespace ''{0}'' is not preceded with whitespace."/>
     </module>
     <module name="Indentation">
-      <property name="basicOffset" value="4"/>
-      <property name="braceAdjustment" value="4"/>
-      <property name="caseIndent" value="4"/>
-      <property name="throwsIndent" value="8"/>
-      <property name="lineWrappingIndentation" value="8"/>
-      <property name="arrayInitIndent" value="4"/>
+      <property name="basicOffset" value="2"/>
+      <property name="braceAdjustment" value="2"/>
+      <property name="caseIndent" value="2"/>
+      <property name="throwsIndent" value="4"/>
+      <property name="lineWrappingIndentation" value="4"/>
+      <property name="arrayInitIndent" value="2"/>
     </module>
     <module name="AbbreviationAsWordInName">
       <property name="ignoreFinal" value="false"/>
@@ -362,7 +360,5 @@
              default="checkstyle-xpath-suppressions.xml" />
       <property name="optional" value="true"/>
     </module>
-    <module name="SuppressWarningsHolder"/>
-    <module name="UnusedImports"/>
   </module>
 </module>
