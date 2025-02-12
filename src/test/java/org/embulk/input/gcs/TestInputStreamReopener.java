@@ -6,7 +6,6 @@ import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.Storage;
 import com.google.common.base.Charsets;
 import com.google.common.io.Files;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.embulk.test.EmbulkTestRuntime;
 import org.embulk.util.file.ResumableInputStream;
 import org.junit.Rule;
@@ -79,7 +78,6 @@ public class TestInputStreamReopener
 
     private static final String SAMPLE_PATH = TestInputStreamReopener.class.getResource("/sample_01.csv").getPath();
 
-    @SuppressFBWarnings("URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD")
     @Rule
     public EmbulkTestRuntime runtime = new EmbulkTestRuntime();
 

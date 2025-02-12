@@ -1,0 +1,51 @@
+[versions]
+
+gradle-embulk-plugins = "0.7.0"
+
+embulk-spi = "0.11"
+slf4j-api = "2.0.7"
+
+embulk-util-config = "0.3.0"
+validation-api = "1.1.0.Final"
+
+embulk-util-file = "0.1.3"
+embulk-util-retryhelper = "0.8.1"
+
+google-cloud-storage = "1.56.0"
+
+jcl-over-slf4j = "1.7.12"
+
+junit4 = "4.12"
+mockito = "2.18.3"
+
+embulk-core = "0.11.4"
+embulk-formatter-csv = "0.10.36"
+embulk-output-file = "0.10.36"
+embulk-parser-csv = "0.10.36"
+
+[libraries]
+
+embulk-spi = { group = "org.embulk", name = "embulk-spi", version.ref = "embulk-spi" }
+slf4j = { group = "org.slf4j", name = "slf4j-api", version.ref = "slf4j-api" }
+embulk-util-config = { group = "org.embulk", name = "embulk-util-config", version.ref = "embulk-util-config" }
+embulk-util-file = { group = "org.embulk", name = "embulk-util-file", version.ref = "embulk-util-file" }
+embulk-util-retryhelper = { group = "org.embulk", name = "embulk-util-retryhelper", version.ref = "embulk-util-retryhelper" }
+validation = { group = "javax.validation", name = "validation-api", version.ref = "validation-api" }
+jackson-annotations = { group = "com.fasterxml.jackson.core", name = "jackson-annotations", version = "2.6.7" }
+jackson-core = { group = "com.fasterxml.jackson.core", name = "jackson-core", version = "2.9.6" }
+jackson-databind = { group = "com.fasterxml.jackson.core", name = "jackson-databind", version = "2.6.7" }
+jackson-datatype-jdk8 = { group = "com.fasterxml.jackson.datatype", name = "jackson-datatype-jdk8", version = "2.6.7" }
+google-cloud-storage = { group = "com.google.cloud", name = "google-cloud-storage", version.ref = "google-cloud-storage" }
+jcl-over-slf4j = { group = "org.slf4j", name = "jcl-over-slf4j", version.ref = "jcl-over-slf4j" }
+junit4 = { group = "junit", name = "junit", version.ref = "junit4" }
+mockito-core = { group = "org.mockito", name = "mockito-core", version.ref = "mockito" }
+embulk-core = { group = "org.embulk", name = "embulk-core", version.ref = "embulk-core" }
+embulk-deps = { group = "org.embulk", name = "embulk-deps", version.ref = "embulk-core" }
+embulk-junit4 = { group = "org.embulk", name = "embulk-junit4", version.ref = "embulk-core" }
+embulk-formatter-csv = { group = "org.embulk", name = "embulk-formatter-csv", version.ref = "embulk-formatter-csv" }
+embulk-output-file = { group = "org.embulk", name = "embulk-output-file", version.ref = "embulk-output-file" }
+embulk-parser-csv = { group = "org.embulk", name = "embulk-parser-csv", version.ref = "embulk-parser-csv" }
+
+[plugins]
+
+gradle-embulk-plugins = { id = "org.embulk.embulk-plugins", version.ref = "gradle-embulk-plugins" }
