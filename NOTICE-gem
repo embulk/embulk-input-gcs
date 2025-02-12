@@ -1,0 +1,340 @@
+embulk-input-gcs
+Copyright 2015-2025 The Embulk project.
+
+This product includes software developed at
+The Embulk project (https://www.embulk.org/).
+
+
+
+The RubyGems distribution of this product includes
+Jackson JSON processor, developed by
+Tatu Saloranta, tatu.saloranta@iki.fi, licensed under
+the Apache License, Version 2.0.
+
+* Copyright (c) 2007- Tatu Saloranta, tatu.saloranta@iki.fi
+* The NOTICE file of Jackson JSON processor is embedded in this NOTICE below.
+
+
+
+The RubyGems distribution of this product includes
+Google Cloud Java Client for Storage, licensed under
+the Apache License, Version 2.0.
+
+
+
+The RubyGems distribution of this product includes
+Google APIs Client Library for Java, licensed under
+the Apache License, Version 2.0.
+
+
+
+The RubyGems distribution of this product includes
+Google Common Protos, licensed under
+the Apache License, Version 2.0.
+
+
+
+The RubyGems distribution of this product includes
+Common utilities for Google APIs in Java, licensed under
+the BSD 3-Clause "New" or "Revised" License.
+
+
+
+The RubyGems distribution of this product includes
+Google API Extensions for Java, licensed under
+the BSD 3-Clause "New" or "Revised" License.
+
+
+
+The RubyGems distribution of this product includes
+JSR305 Annotations for Findbugs, licensed under
+the Apache License, Version 2.0.
+
+
+
+The RubyGems distribution of this product includes
+Google Gson, licensed under
+the Apache License, Version 2.0.
+
+
+
+The RubyGems distribution of this product includes
+Error Prone, licensed under
+the Apache License, Version 2.0.
+
+
+
+The RubyGems distribution of this product includes
+Guava: Google Core Libraries for Java, licensed under
+the Apache License, Version 2.0.
+
+
+
+The RubyGems distribution of this product includes
+Google HTTP Client Library for Java, licensed under
+the Apache License, Version 2.0.
+
+
+
+The RubyGems distribution of this product includes
+J2ObjC: Java to Objective-C Translator and Runtime, licensed under
+the Apache License, Version 2.0.
+
+
+
+The RubyGems distribution of this product includes
+Google OAuth Client Library for Java, licensed under
+the Apache License, Version 2.0.
+
+
+
+The RubyGems distribution of this product includes
+Protocol Buffers, licensed under
+the BSD 3-Clause "New" or "Revised" License.
+
+
+
+The RubyGems distribution of this product includes
+Apache Commons Codec, licensed under
+the Apache License, Version 2.0.
+
+* Copyright 2002-2014 The Apache Software Foundation
+* The NOTICE.txt file of Apache Commons Codec is embedded in this NOTICE below.
+
+
+
+The RubyGems distribution of this product includes
+gRPC-Java - An RPC library and framework, licensed under
+the Apache License, Version 2.0.
+
+* Copyright 2014 The gRPC Authors
+* The NOTICE.txt file of gRPC-Java is embedded in this NOTICE below.
+
+
+
+The RubyGems distribution of this product includes
+OpenCensus, licensed under
+the Apache License, Version 2.0.
+
+
+
+The RubyGems distribution of this product includes
+Joda-Time, licensed under
+the Apache License, Version 2.0.
+
+* The NOTICE.txt file of Joda-Time is embedded in this NOTICE below.
+
+
+
+The RubyGems distribution of this product includes
+Apache HttpClient, licensed under
+the Apache License, Version 2.0.
+
+* The NOTICE.txt file of Apache HttpClient is embedded in this NOTICE below.
+
+
+
+The RubyGems distribution of this product includes
+Apache HttpCore, licensed under
+the Apache License, Version 2.0.
+
+* The NOTICE.txt file of Apache HttpCore is embedded in this NOTICE below.
+
+
+
+The RubyGems distribution of this product includes
+Checker Qual, licensed under
+the MIT License.
+
+
+
+The RubyGems distribution of this product includes
+Animal Sniffer Annotations, licensed under
+the MIT License.
+
+
+
+The RubyGems distribution of this product includes
+MessagePack for Java, licensed under
+the Apache License, Version 2.0.
+
+* The NOTICE file of MessagePack for Java is embedded in this NOTICE below.
+
+
+
+The RubyGems distribution of this product includes
+JCL 1.2 implemented over SLF4J, licensed under
+the Apache License, Version 2.0.
+
+
+
+The RubyGems distribution of this product includes
+ThreeTen-Backport, licensed under
+the BSD 3-Clause "New" or "Revised" License.
+
+
+
+The RubyGems distribution of this product includes
+the Bean Validation API 1.1, developed by
+the JSR-349 Expert Group (https://beanvalidation.org/1.1/), licensed under
+the Apache License, Version 2.0.
+
+
+
+NOTICE of Jackson JSON processor
+---------------------------------
+
+# Jackson JSON processor
+
+Jackson is a high-performance, Free/Open Source JSON processing library.
+It was originally written by Tatu Saloranta (tatu.saloranta@iki.fi), and has
+been in development since 2007.
+It is currently developed by a community of developers, as well as supported
+commercially by FasterXML.com.
+
+## Licensing
+
+Jackson core and extension components may be licensed under different licenses.
+To find the details that apply to this artifact see the accompanying LICENSE file.
+For more information, including possible other licensing options, contact
+FasterXML.com (http://fasterxml.com).
+
+## Credits
+
+A list of contributors may be found from CREDITS file, which is included
+in some artifacts (usually source distributions); but is always available
+from the source code management (SCM) system project uses.
+
+
+
+NOTICE.txt of Apache Commons Codec
+-----------------------------------
+
+Apache Commons Codec
+Copyright 2002-2014 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+src/test/org/apache/commons/codec/language/DoubleMetaphoneTest.java
+contains test data from http://aspell.net/test/orig/batch0.tab.
+Copyright (C) 2002 Kevin Atkinson (kevina@gnu.org)
+
+===============================================================================
+
+The content of package org.apache.commons.codec.language.bm has been translated
+from the original php source code available at http://stevemorse.org/phoneticinfo.htm
+with permission from the original authors.
+Original source copyright:
+Copyright (c) 2008 Alexander Beider & Stephen P. Morse.
+
+
+
+NOTICE.txt of gRPC-Java
+------------------------
+
+Copyright 2014 The gRPC Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+-----------------------------------------------------------------------
+
+This product contains a modified portion of 'OkHttp', an open source
+HTTP & SPDY client for Android and Java applications, which can be obtained
+at:
+
+  * LICENSE:
+    * okhttp/third_party/okhttp/LICENSE (Apache License 2.0)
+  * HOMEPAGE:
+    * https://github.com/square/okhttp
+  * LOCATION_IN_GRPC:
+    * okhttp/third_party/okhttp
+
+This product contains a modified portion of 'Envoy', an open source
+cloud-native high-performance edge/middle/service proxy, which can be
+obtained at:
+
+  * LICENSE:
+    * xds/third_party/envoy/LICENSE (Apache License 2.0)
+  * NOTICE:
+    * xds/third_party/envoy/NOTICE
+  * HOMEPAGE:
+    * https://www.envoyproxy.io
+  * LOCATION_IN_GRPC:
+    * xds/third_party/envoy
+
+This product contains a modified portion of 'protoc-gen-validate (PGV)',
+an open source protoc plugin to generate polyglot message validators,
+which can be obtained at:
+
+  * LICENSE:
+    * xds/third_party/protoc-gen-validate/LICENSE (Apache License 2.0)
+  * NOTICE:
+      * xds/third_party/protoc-gen-validate/NOTICE
+  * HOMEPAGE:
+    * https://github.com/envoyproxy/protoc-gen-validate
+  * LOCATION_IN_GRPC:
+    * xds/third_party/protoc-gen-validate
+
+This product contains a modified portion of 'udpa',
+an open source universal data plane API, which can be obtained at:
+
+  * LICENSE:
+    * xds/third_party/udpa/LICENSE (Apache License 2.0)
+  * HOMEPAGE:
+    * https://github.com/cncf/udpa
+  * LOCATION_IN_GRPC:
+    * xds/third_party/udpa
+
+
+
+NOTICE.txt of Joda-Time
+------------------------
+
+=============================================================================
+= NOTICE file corresponding to section 4d of the Apache License Version 2.0 =
+=============================================================================
+This product includes software developed by
+Joda.org (http://www.joda.org/).
+
+
+
+NOTICE.txt of Apache HttpClient
+--------------------------------
+
+Apache HttpComponents Client
+Copyright 1999-2018 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+
+
+NOTICE.txt of Apache HttpCore
+------------------------------
+
+Apache HttpComponents Core
+Copyright 2005-2017 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+
+
+NOTICE of MessagePack for Java
+-------------------------------
+
+This product includes the software developed by third-party:
+
+ * Google Guava https://code.google.com/p/guava-libraries/  (APL2)
+ * sbt-extras: https://github.com/paulp/sbt-extras  (BSD)  (LICENSE.sbt-extras.txt)

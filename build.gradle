@@ -97,18 +97,21 @@ javadoc {
 }
 
 jar {
-    from rootProject.file("LICENSE")
-    from rootProject.file("NOTICE")
+    metaInf {
+        from rootProject.file("LICENSE")
+    }
 }
 
 sourcesJar {
-    from rootProject.file("LICENSE")
-    from rootProject.file("NOTICE")
+    metaInf {
+        from rootProject.file("LICENSE")
+    }
 }
 
 javadocJar {
-    from rootProject.file("LICENSE")
-    from rootProject.file("NOTICE")
+    metaInf {
+        from rootProject.file("LICENSE")
+    }
 }
 
 // It should not publish a `.module` file in Maven Central.
@@ -208,8 +211,8 @@ gem {
     homepage = "https://github.com/embulk/embulk-input-gcs"
     licenses = [ "Apache-2.0" ]
     from rootProject.file("LICENSE")
-    from rootProject.file("NOTICE_GEM")
-    rename ("NOTICE_GEM", "NOTICE")
+    from rootProject.file("NOTICE-gem")
+    rename ("NOTICE-gem", "NOTICE")
 
     // The contents of "shadow-google-cloud-storage-*.jar" should have already been mixed in "embulk-input-gcs-*.jar".
     exclude { it.file.name.contains "shadow-google-cloud-storage" }
