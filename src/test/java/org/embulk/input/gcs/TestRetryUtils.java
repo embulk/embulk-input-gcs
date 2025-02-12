@@ -16,7 +16,7 @@ import com.google.api.client.testing.http.MockLowLevelHttpRequest;
 import com.google.api.client.testing.http.MockLowLevelHttpResponse;
 import com.google.cloud.storage.StorageException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import org.embulk.EmbulkTestRuntime;
+import org.embulk.test.EmbulkTestRuntime;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
