@@ -37,26 +37,7 @@ dependencies {
     compileOnly libs.embulk.spi
     compileOnly libs.slf4j
 
-    implementation(libs.embulk.util.config) {
-        // Conflict with Embulk Core
-        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-annotations'
-        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-core'
-        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-databind'
-        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jdk8'
-        exclude group: 'javax.validation', module: 'validation-api'
-    }
-
-    // embulk-input-gcs:0.3.2 and earlier have been working with containing jackson-core:2.9.6 (no other Jackson sublibrarires)
-    // while embulk-core has had jackson-core/annotations/databind 2.6.7. Safer to have the combat-tested version as of now.
-    //
-    // It (and other Jackson sublibraries) will be replaced with the latest Jackson after Embulk v0.10.32 and later get popular.
-    implementation libs.jackson.core
-
-    implementation libs.jackson.annotations
-    implementation libs.jackson.databind
-    implementation libs.jackson.datatype.jdk8
-    implementation libs.validation
-
+    implementation libs.embulk.util.config
     implementation libs.embulk.util.file
     implementation(libs.embulk.util.retryhelper) {
         exclude group: "org.slf4j", module: "slf4j-api"
