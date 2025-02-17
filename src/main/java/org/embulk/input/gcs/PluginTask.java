@@ -1,15 +1,12 @@
 package org.embulk.input.gcs;
 
+import java.util.List;
+import java.util.Optional;
 import org.embulk.util.config.Config;
 import org.embulk.util.config.ConfigDefault;
 import org.embulk.util.config.Task;
 
-import java.util.List;
-import java.util.Optional;
-
-public interface PluginTask
-        extends Task, AuthUtils.Task, FileList.Task, RetryUtils.Task
-{
+public interface PluginTask extends Task, AuthUtils.Task, FileList.Task, RetryUtils.Task {
     @Config("bucket")
     String getBucket();
 
@@ -34,5 +31,6 @@ public interface PluginTask
     List<String> getPathFiles();
 
     FileList getFiles();
+
     void setFiles(FileList files);
 }

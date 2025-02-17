@@ -7,11 +7,6 @@ import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageException;
 import com.google.cloud.storage.StorageOptions;
-import org.embulk.config.ConfigException;
-import org.embulk.util.config.Config;
-import org.embulk.util.config.ConfigDefault;
-import org.embulk.util.config.units.LocalFile;
-
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -20,16 +15,17 @@ import java.security.PrivateKey;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Optional;
+import org.embulk.config.ConfigException;
+import org.embulk.util.config.Config;
+import org.embulk.util.config.ConfigDefault;
+import org.embulk.util.config.units.LocalFile;
 
-class AuthUtils
-{
-    public enum AuthMethod
-    {
+class AuthUtils {
+    public enum AuthMethod {
         private_key, compute_engine, json_key
     }
 
-    interface Task
-    {
+    interface Task {
         @Config("auth_method")
         @ConfigDefault("\"private_key\"")
         AuthUtils.AuthMethod getAuthMethod();
@@ -46,6 +42,7 @@ class AuthUtils
         @Config("p12_keyfile")
         @ConfigDefault("null")
         Optional<LocalFile> getP12Keyfile();
+
         void setP12Keyfile(Optional<LocalFile> p12Keyfile);
 
         @Config("json_keyfile")
@@ -53,12 +50,10 @@ class AuthUtils
         Optional<LocalFile> getJsonKeyfile();
     }
 
-    private AuthUtils()
-    {
+    private AuthUtils() {
     }
 
-    static Storage newClient(final PluginTask task)
-    {
+    static Storage newClient(final PluginTask task) {
         try {
             final StorageOptions.Builder builder = StorageOptions.newBuilder();
             switch (task.getAuthMethod()) {
@@ -76,14 +71,12 @@ class AuthUtils
             final Storage client = builder.build().getService();
             client.list(task.getBucket(), Storage.BlobListOption.pageSize(1));
             return client;
-        }
-        catch (StorageException | IOException | GeneralSecurityException e) {
+        } catch (final StorageException | IOException | GeneralSecurityException e) {
             throw new ConfigException(e);
         }
     }
 
-    static Credentials fromP12(final Task task) throws IOException, GeneralSecurityException
-    {
+    static Credentials fromP12(final Task task) throws IOException, GeneralSecurityException {
         final String path = task.getP12Keyfile().get().getPath().toString();
         try (final InputStream p12InputStream = new FileInputStream(path)) {
             final PrivateKey pk = SecurityUtils.loadPrivateKeyFromKeyStore(
@@ -99,8 +92,7 @@ class AuthUtils
         }
     }
 
-    static Credentials fromJson(final Task task) throws IOException
-    {
+    static Credentials fromJson(final Task task) throws IOException {
         final String path = task.getJsonKeyfile().map(f -> f.getPath().toString()).get();
         final InputStream jsonStream = new FileInputStream(path);
         return ServiceAccountCredentials.fromStream(jsonStream);

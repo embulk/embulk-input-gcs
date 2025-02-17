@@ -1,77 +1,67 @@
 package org.embulk.input.gcs;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+
 import com.google.cloud.ReadChannel;
 import com.google.cloud.RestorableState;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.Storage;
 import com.google.common.base.Charsets;
 import com.google.common.io.Files;
-import org.embulk.test.EmbulkTestRuntime;
-import org.embulk.util.file.ResumableInputStream;
-import org.junit.Rule;
-import org.junit.Test;
-import org.mockito.Mockito;
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.Paths;
+import org.embulk.test.EmbulkTestRuntime;
+import org.embulk.util.file.ResumableInputStream;
+import org.junit.Rule;
+import org.junit.Test;
+import org.mockito.Mockito;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-
-public class TestInputStreamReopener
-{
-    private static class MockReadChannel implements ReadChannel
-    {
+public class TestInputStreamReopener {
+    private static class MockReadChannel implements ReadChannel {
         private FileChannel ch;
 
-        MockReadChannel(FileChannel ch)
-        {
+        MockReadChannel(final FileChannel ch) {
             this.ch = ch;
         }
 
         @Override
-        public boolean isOpen()
-        {
+        public boolean isOpen() {
             return this.ch.isOpen();
         }
 
         @Override
-        public void close()
-        {
+        public void close() {
             try {
                 this.ch.close();
-            }
-            catch (IOException ignored) {
+            } catch (final IOException ignored) {
+                // no-op
             }
         }
 
         @Override
-        public void seek(long position) throws IOException
-        {
+        public void seek(final long position) throws IOException {
             this.ch.position(position);
         }
 
         @Override
-        public void setChunkSize(int chunkSize)
-        {
+        public void setChunkSize(final int chunkSize) {
             // no-op
         }
 
         @Override
-        public RestorableState<ReadChannel> capture()
-        {
+        public RestorableState<ReadChannel> capture() {
             return null;
         }
 
         @Override
-        public int read(ByteBuffer dst) throws IOException
-        {
+        public int read(final ByteBuffer dst) throws IOException {
             return this.ch.read(dst);
         }
     }
@@ -82,8 +72,7 @@ public class TestInputStreamReopener
     public EmbulkTestRuntime runtime = new EmbulkTestRuntime();
 
     @Test
-    public void testResume()
-    {
+    public void testResume() {
         final String bucket = "any_bucket";
         final String key = "any_file";
 
@@ -101,15 +90,13 @@ public class TestInputStreamReopener
             String content = out.toString("UTF-8");
             // assert content
             assertString(content);
-        }
-        catch (IOException e) {
+        } catch (final IOException e) {
             e.printStackTrace();
             fail("Should not throw");
         }
     }
 
-    private Storage mockStorage()
-    {
+    private Storage mockStorage() {
         Blob blob = Mockito.mock(Blob.class);
         // mock Storage to return ReadChannel
         Storage client = Mockito.mock(Storage.class);
@@ -121,12 +108,8 @@ public class TestInputStreamReopener
 
     /**
      * Return a mock FileChannel, with simulated error during reads
-     *
-     * @return
-     * @throws IOException
      */
-    private static FileChannel mockChannel() throws IOException
-    {
+    private static FileChannel mockChannel() throws IOException {
         FileChannel ch = Mockito.spy(FileChannel.open(Paths.get(SAMPLE_PATH)));
         // success -> error -> success -> error...
         Mockito.doCallRealMethod()
@@ -135,8 +118,7 @@ public class TestInputStreamReopener
         return ch;
     }
 
-    private static void assertString(final String actual) throws IOException
-    {
+    private static void assertString(final String actual) throws IOException {
         final String expected = Files.asCharSource(new File(SAMPLE_PATH), Charsets.UTF_8).read();
         assertEquals(expected, actual);
     }

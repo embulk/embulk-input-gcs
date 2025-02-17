@@ -37,26 +37,7 @@ dependencies {
     compileOnly libs.embulk.spi
     compileOnly libs.slf4j
 
-    implementation(libs.embulk.util.config) {
-        // Conflict with Embulk Core
-        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-annotations'
-        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-core'
-        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-databind'
-        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jdk8'
-        exclude group: 'javax.validation', module: 'validation-api'
-    }
-
-    // embulk-input-gcs:0.3.2 and earlier have been working with containing jackson-core:2.9.6 (no other Jackson sublibrarires)
-    // while embulk-core has had jackson-core/annotations/databind 2.6.7. Safer to have the combat-tested version as of now.
-    //
-    // It (and other Jackson sublibraries) will be replaced with the latest Jackson after Embulk v0.10.32 and later get popular.
-    implementation libs.jackson.core
-
-    implementation libs.jackson.annotations
-    implementation libs.jackson.databind
-    implementation libs.jackson.datatype.jdk8
-    implementation libs.validation
-
+    implementation libs.embulk.util.config
     implementation libs.embulk.util.file
     implementation(libs.embulk.util.retryhelper) {
         exclude group: "org.slf4j", module: "slf4j-api"
@@ -97,24 +78,40 @@ javadoc {
 }
 
 jar {
-    from rootProject.file("LICENSE")
-    from rootProject.file("NOTICE")
+    metaInf {
+        from rootProject.file("LICENSE")
+    }
 }
 
 sourcesJar {
-    from rootProject.file("LICENSE")
-    from rootProject.file("NOTICE")
+    metaInf {
+        from rootProject.file("LICENSE")
+    }
 }
 
 javadocJar {
-    from rootProject.file("LICENSE")
-    from rootProject.file("NOTICE")
+    metaInf {
+        from rootProject.file("LICENSE")
+    }
 }
 
 // It should not publish a `.module` file in Maven Central.
 // https://docs.gradle.org/current/userguide/publishing_gradle_module_metadata.html#sub:disabling-gmm-publication
 tasks.withType(GenerateModuleMetadata) {
     enabled = false
+}
+
+// A safer and strict alternative to: "dependencies" (and "dependencies --write-locks")
+//
+// This task fails explicitly when the specified dependency is not available.
+// In contrast, "dependencies (--write-locks)" does not fail even when a part the dependencies are unavailable.
+//
+// https://docs.gradle.org/8.7/userguide/dependency_locking.html#generating_and_updating_dependency_locks
+task checkDependencies {
+    notCompatibleWithConfigurationCache("The task \"checkDependencies\" filters configurations at execution time.")
+    doLast {
+        configurations.findAll { it.canBeResolved }.each { it.resolve() }
+    }
 }
 
 publishing {
@@ -124,6 +121,8 @@ publishing {
             artifactId = project.name
 
             from components.java
+            // javadocJar and sourcesJar are added by java.withJavadocJar() and java.withSourcesJar() above.
+            // See: https://docs.gradle.org/current/javadoc/org/gradle/api/plugins/JavaPluginExtension.html
 
             pom {  // https://central.sonatype.org/pages/requirements.html
                 packaging "jar"
@@ -168,6 +167,7 @@ publishing {
                         // http://central.sonatype.org/pages/requirements.html#license-information
                         name = "The Apache License, Version 2.0"
                         url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
+                        distribution = "repo"
                     }
                 }
 
@@ -198,6 +198,10 @@ publishing {
 }
 
 signing {
+    if (project.hasProperty("signingKey") && project.hasProperty("signingPassword")) {
+        logger.lifecycle("Signing with an in-memory key.")
+        useInMemoryPgpKeys(signingKey, signingPassword)
+    }
     sign publishing.publications.maven
 }
 
@@ -208,8 +212,8 @@ gem {
     homepage = "https://github.com/embulk/embulk-input-gcs"
     licenses = [ "Apache-2.0" ]
     from rootProject.file("LICENSE")
-    from rootProject.file("NOTICE_GEM")
-    rename ("NOTICE_GEM", "NOTICE")
+    from rootProject.file("NOTICE-gem")
+    rename ("NOTICE-gem", "NOTICE")
 }
 
 gemPush {
@@ -217,31 +221,31 @@ gemPush {
 }
 
 test {
-    jvmArgs '-XX:MaxPermSize=128M', '-Xmx2048m'
+    jvmArgs "-XX:MaxPermSize=128M", "-Xmx2048m"
     testLogging {
-        outputs.upToDateWhen { false }
+        events "passed", "skipped", "failed", "standardOut", "standardError"
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
         showCauses = true
         showExceptions = true
         showStackTraces = true
         showStandardStreams = true
-        events "passed", "skipped", "failed", "standardOut", "standardError"
+        outputs.upToDateWhen { false }
+    }
+}
+
+tasks.withType(Checkstyle) {
+    reports {
+        // Not to skip up-to-date checkstyles.
+        outputs.upToDateWhen { false }
     }
 }
 
 checkstyle {
-    configFile = file("${project.rootDir}/config/checkstyle/checkstyle.xml")
-    toolVersion = '6.14.1'
-}
-checkstyleMain {
-    configFile = file("${project.rootDir}/config/checkstyle/default.xml")
+    toolVersion = libs.versions.checkstyle.get()
+    configFile = file("${rootProject.projectDir}/config/checkstyle/checkstyle.xml")
+    configProperties = [
+        "org.checkstyle.google.suppressionfilter.config": file("${rootProject.projectDir}/config/checkstyle/checkstyle-suppressions.xml"),
+    ]
     ignoreFailures = false
-}
-checkstyleTest {
-    configFile = file("${project.rootDir}/config/checkstyle/default.xml")
-    ignoreFailures = false
-}
-task checkstyle(type: Checkstyle) {
-    classpath = sourceSets.main.output + sourceSets.test.output
-    source = sourceSets.main.allJava + sourceSets.test.allJava
+    maxWarnings = 0
 }

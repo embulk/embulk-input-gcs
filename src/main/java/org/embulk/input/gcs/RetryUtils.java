@@ -5,6 +5,8 @@ import com.google.api.client.auth.oauth2.TokenResponseException;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.Storage;
+import java.util.Optional;
+import java.util.function.Predicate;
 import org.embulk.util.config.Config;
 import org.embulk.util.config.ConfigDefault;
 import org.embulk.util.retryhelper.RetryExecutor;
@@ -13,13 +15,8 @@ import org.embulk.util.retryhelper.Retryable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Optional;
-import java.util.function.Predicate;
-
-class RetryUtils
-{
-    interface Task extends org.embulk.util.config.Task
-    {
+class RetryUtils {
+    interface Task extends org.embulk.util.config.Task {
         @Config("max_connection_retry")
         @ConfigDefault("10") // 10 times retry to connect GCS server if failed.
         int getMaxConnectionRetry();
@@ -33,8 +30,7 @@ class RetryUtils
         int getMaximumRetryIntervalMillis();
     }
 
-    private RetryUtils()
-    {
+    private RetryUtils() {
     }
 
     private static final Logger LOG = LoggerFactory.getLogger(RetryUtils.class);
@@ -75,57 +71,41 @@ class RetryUtils
     /**
      * A default (abstract) retryable impl, which makes use of above 2 predicates
      * With default behaviors onRetry, etc.
-     *
-     * @param <T>
      */
-    public abstract static class DefaultRetryable<T> implements Retryable<T>
-    {
+    public abstract static class DefaultRetryable<T> implements Retryable<T> {
         @Override
-        public boolean isRetryableException(Exception exception)
-        {
+        public boolean isRetryableException(final Exception exception) {
             if (exception instanceof GoogleJsonResponseException) {
                 return API_ERROR_NOT_RETRY_4XX.test((GoogleJsonResponseException) exception);
-            }
-            else if (exception instanceof TokenResponseException) {
+            } else if (exception instanceof TokenResponseException) {
                 return TOKEN_ERROR_NOT_RETRY_4XX.test((TokenResponseException) exception);
             }
             return true;
         }
 
         @Override
-        public void onRetry(Exception exception, int retryCount, int retryLimit, int retryWait)
-        {
+        public void onRetry(final Exception exception, final int retryCount, final int retryLimit, final int retryWait) {
             String message = String.format("GCS GET request failed. Retrying %d/%d after %d seconds. Message: %s: %s",
                     retryCount, retryLimit, retryWait / 1000, exception.getClass(), exception.getMessage());
             if (retryCount % 3 == 0) {
                 LOG.warn(message, exception);
-            }
-            else {
+            } else {
                 LOG.warn(message);
             }
         }
 
         @Override
-        public void onGiveup(Exception firstException, Exception lastException)
-        {
+        public void onGiveup(final Exception firstException, final Exception lastException) {
         }
     }
 
     /**
      * Return Blob GET op that is ready for {@code withRetry}
-     *
-     * @param client
-     * @param bucket
-     * @param key
-     * @return
      */
-    static DefaultRetryable<Blob> get(Storage client, String bucket, String key)
-    {
-        return new DefaultRetryable<Blob>()
-        {
+    static DefaultRetryable<Blob> get(final Storage client, final String bucket, final String key) {
+        return new DefaultRetryable<Blob>() {
             @Override
-            public Blob call()
-            {
+            public Blob call() {
                 return client.get(bucket, key);
             }
         };
@@ -133,14 +113,8 @@ class RetryUtils
 
     /**
      * Utility method
-     *
-     * @param task
-     * @param op
-     * @param <T>
-     * @return
      */
-    static <T> T withRetry(Task task, Retryable<T> op)
-    {
+    static <T> T withRetry(final Task task, final Retryable<T> op) {
         try {
             return RetryExecutor.builder()
                     .withInitialRetryWaitMillis(task.getInitialRetryIntervalMillis())
@@ -148,8 +122,7 @@ class RetryUtils
                     .withRetryLimit(task.getMaxConnectionRetry())
                     .build()
                     .runInterruptible(op);
-        }
-        catch (RetryGiveupException | InterruptedException e) {
+        } catch (final RetryGiveupException | InterruptedException e) {
             throw new RuntimeException(e);
         }
     }

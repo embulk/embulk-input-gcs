@@ -3,10 +3,6 @@ package org.embulk.input.gcs;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.embulk.config.ConfigSource;
-import org.embulk.util.config.Config;
-import org.embulk.util.config.ConfigDefault;
-
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
@@ -23,11 +19,12 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
+import org.embulk.config.ConfigSource;
+import org.embulk.util.config.Config;
+import org.embulk.util.config.ConfigDefault;
 
-public class FileList
-{
-    public interface Task
-    {
+public class FileList {
+    public interface Task {
         @Config("path_match_pattern")
         @ConfigDefault("\".*\"")
         String getPathMatchPattern();
@@ -42,35 +39,30 @@ public class FileList
         long getMinTaskSize();
     }
 
-    public static class Entry
-    {
+    public static class Entry {
         private int index;
         private long size;
 
         @JsonCreator
         public Entry(
-                @JsonProperty("index") int index,
-                @JsonProperty("size") long size)
-        {
+                @JsonProperty("index") final int index,
+                @JsonProperty("size") final long size) {
             this.index = index;
             this.size = size;
         }
 
         @JsonProperty("index")
-        public int getIndex()
-        {
+        public int getIndex() {
             return index;
         }
 
         @JsonProperty("size")
-        public long getSize()
-        {
+        public long getSize() {
             return size;
         }
     }
 
-    public static class Builder
-    {
+    public static class Builder {
         private final ByteArrayOutputStream binary;
         private final OutputStream stream;
         private final List<Entry> entries = new ArrayList<>();
@@ -82,64 +74,54 @@ public class FileList
 
         private final ByteBuffer castBuffer = ByteBuffer.allocate(4);
 
-        public Builder(Task task)
-        {
+        public Builder(final Task task) {
             this();
             this.pathMatchPattern = Pattern.compile(task.getPathMatchPattern());
             this.limitCount = task.getTotalFileCountLimit();
             this.minTaskSize = task.getMinTaskSize();
         }
 
-        public Builder(ConfigSource config)
-        {
+        public Builder(final ConfigSource config) {
             this();
             this.pathMatchPattern = Pattern.compile(config.get(String.class, "path_match_pattern", ".*"));
             this.limitCount = config.get(int.class, "total_file_count_limit", Integer.MAX_VALUE);
             this.minTaskSize = config.get(long.class, "min_task_size", 0L);
         }
 
-        public Builder()
-        {
+        public Builder() {
             binary = new ByteArrayOutputStream();
             try {
                 stream = new BufferedOutputStream(new GZIPOutputStream(binary));
-            }
-            catch (IOException ex) {
+            } catch (final IOException ex) {
                 throw new RuntimeException(ex);
             }
         }
 
-        public Builder limitTotalFileCount(int limitCount)
-        {
+        public Builder limitTotalFileCount(final int limitCount) {
             this.limitCount = limitCount;
             return this;
         }
 
-        public Builder minTaskSize(long bytes)
-        {
+        public Builder minTaskSize(final long bytes) {
             this.minTaskSize = bytes;
             return this;
         }
 
-        public synchronized Builder pathMatchPattern(String pattern)
-        {
+        public synchronized Builder pathMatchPattern(final String pattern) {
             this.pathMatchPattern = Pattern.compile(pattern);
             return this;
         }
 
-        public int size()
-        {
+        public int size() {
             return entries.size();
         }
 
-        public boolean needsMore()
-        {
+        public boolean needsMore() {
             return size() < limitCount;
         }
 
         // returns true if this file is used
-        public synchronized boolean add(String path, long size)
-        {
+        public synchronized boolean add(final String path, final long size) {
             // TODO throw IllegalStateException if stream is already closed
 
             if (!needsMore()) {
@@ -158,8 +140,7 @@ public class FileList
             try {
                 stream.write(castBuffer.array());
                 stream.write(data);
-            }
-            catch (IOException ex) {
+            } catch (final IOException ex) {
                 throw new RuntimeException(ex);
             }
 
@@ -167,19 +148,16 @@ public class FileList
             return true;
         }
 
-        public synchronized FileList build()
-        {
+        public synchronized FileList build() {
             try {
                 stream.close();
-            }
-            catch (IOException ex) {
+            } catch (final IOException ex) {
                 throw new RuntimeException(ex);
             }
             return new FileList(binary.toByteArray(), getSplits(entries), Optional.ofNullable(last));
         }
 
-        private List<List<Entry>> getSplits(List<Entry> all)
-        {
+        private List<List<Entry>> getSplits(final List<Entry> all) {
             List<List<Entry>> tasks = new ArrayList<>();
             long currentTaskSize = 0;
             List<Entry> currentTask = new ArrayList<>();
@@ -206,18 +184,16 @@ public class FileList
     @JsonCreator
     @Deprecated
     public FileList(
-            @JsonProperty("data") byte[] data,
-            @JsonProperty("tasks") List<List<Entry>> tasks,
-            @JsonProperty("last") Optional<String> last)
-    {
+            @JsonProperty("data") final byte[] data,
+            @JsonProperty("tasks") final List<List<Entry>> tasks,
+            @JsonProperty("last") final Optional<String> last) {
         this.data = data.clone();
         this.tasks = tasks;
         this.last = last;
     }
 
     @JsonIgnore
-    public Optional<String> getLastPath(Optional<String> lastLastPath)
-    {
+    public Optional<String> getLastPath(final Optional<String> lastLastPath) {
         if (last.isPresent()) {
             return last;
         }
@@ -225,41 +201,34 @@ public class FileList
     }
 
     @JsonIgnore
-    public int getTaskCount()
-    {
+    public int getTaskCount() {
         return tasks.size();
     }
 
     @JsonIgnore
-    public List<String> get(int i)
-    {
+    public List<String> get(final int i) {
         return new EntryList(data, tasks.get(i));
     }
 
     @JsonProperty("data")
     @Deprecated
-    public byte[] getData()
-    {
+    public byte[] getData() {
         return data.clone();
     }
 
     @JsonProperty("tasks")
     @Deprecated
-    public List<List<Entry>> getTasks()
-    {
+    public List<List<Entry>> getTasks() {
         return tasks;
     }
 
     @JsonProperty("last")
     @Deprecated
-    public Optional<String> getLast()
-    {
+    public Optional<String> getLast() {
         return last;
     }
 
-    private static class EntryList
-            extends AbstractList<String>
-    {
+    private static class EntryList extends AbstractList<String> {
         private final byte[] data;
         private final List<Entry> entries;
         private InputStream stream;
@@ -267,30 +236,26 @@ public class FileList
 
         private final ByteBuffer castBuffer = ByteBuffer.allocate(4);
 
-        public EntryList(byte[] data, List<Entry> entries)
-        {
+        public EntryList(final byte[] data, final List<Entry> entries) {
             this.data = data;
             this.entries = entries;
             try {
                 this.stream = new BufferedInputStream(new GZIPInputStream(new ByteArrayInputStream(data)));
-            }
-            catch (IOException ex) {
+            } catch (final IOException ex) {
                 throw new RuntimeException(ex);
             }
             this.current = 0;
         }
 
         @Override
-        public synchronized String get(int i)
-        {
+        public synchronized String get(final int i) {
             Entry e = entries.get(i);
             if (e.getIndex() < current) {
                 // rewind to the head
                 try {
                     stream.close();
                     stream = new BufferedInputStream(new GZIPInputStream(new ByteArrayInputStream(data)));
-                }
-                catch (IOException ex) {
+                } catch (final IOException ex) {
                     throw new RuntimeException(ex);
                 }
                 current = 0;
@@ -304,13 +269,11 @@ public class FileList
         }
 
         @Override
-        public int size()
-        {
+        public int size() {
             return entries.size();
         }
 
-        private byte[] readNext()
-        {
+        private byte[] readNext() {
             try {
                 int n = stream.read(castBuffer.array());
                 if (n != castBuffer.capacity()) {
@@ -328,14 +291,12 @@ public class FileList
                 current++;
 
                 return b;
-            }
-            catch (IOException ex) {
+            } catch (final IOException ex) {
                 throw new RuntimeException(ex);
             }
         }
 
-        private String readNextString()
-        {
+        private String readNextString() {
             return new String(readNext(), StandardCharsets.UTF_8);
         }
     }
