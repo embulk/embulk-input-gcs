@@ -1,7 +1,6 @@
 package org.embulk.input.gcs;
 
 import com.google.auth.Credentials;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.embulk.config.ConfigException;
 import org.embulk.config.ConfigSource;
 import org.embulk.test.EmbulkTestRuntime;
@@ -55,7 +54,6 @@ public class TestAuthUtils
         GCP_BUCKET = gcpBucket;
     }
 
-    @SuppressFBWarnings("URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD")
     @Rule
     public EmbulkTestRuntime runtime = new EmbulkTestRuntime();
     private ConfigSource config;

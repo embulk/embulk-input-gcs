@@ -1,22 +1,23 @@
 plugins {
     id "java"
-    id "checkstyle"
-    id "jacoco"
-    id "signing"
     id "maven-publish"
-    id "org.embulk.embulk-plugins" version "0.7.0"
+    id "signing"
+    alias(libs.plugins.gradle.embulk.plugins)
+    id "checkstyle"
 }
 
 repositories {
     mavenCentral()
 }
 
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
-
 group = "org.embulk"
 version = "0.5.0-SNAPSHOT"
 description = "Reads files stored on Google Cloud Storage."
+
+configurations {
+    compileClasspath.resolutionStrategy.activateDependencyLocking()
+    runtimeClasspath.resolutionStrategy.activateDependencyLocking()
+}
 
 tasks.withType(JavaCompile) {
     options.compilerArgs << "-Xlint:deprecation" << "-Xlint:unchecked"
@@ -24,14 +25,19 @@ tasks.withType(JavaCompile) {
 }
 
 java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
+
     withJavadocJar()
     withSourcesJar()
 }
 
 dependencies {
-    compileOnly "org.embulk:embulk-spi:0.11"
+    compileOnly libs.embulk.spi
+    compileOnly libs.slf4j
 
-    implementation('org.embulk:embulk-util-config:0.3.1') {
+    implementation(libs.embulk.util.config) {
         // Conflict with Embulk Core
         exclude group: 'com.fasterxml.jackson.core', module: 'jackson-annotations'
         exclude group: 'com.fasterxml.jackson.core', module: 'jackson-core'
@@ -44,38 +50,37 @@ dependencies {
     // while embulk-core has had jackson-core/annotations/databind 2.6.7. Safer to have the combat-tested version as of now.
     //
     // It (and other Jackson sublibraries) will be replaced with the latest Jackson after Embulk v0.10.32 and later get popular.
-    implementation "com.fasterxml.jackson.core:jackson-core:2.9.6"
+    implementation libs.jackson.core
 
-    implementation 'com.fasterxml.jackson.core:jackson-annotations:2.6.7'
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.6.7'
-    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.6.7'
-    implementation 'javax.validation:validation-api:1.1.0.Final'
+    implementation libs.jackson.annotations
+    implementation libs.jackson.databind
+    implementation libs.jackson.datatype.jdk8
+    implementation libs.validation
 
-    implementation "org.embulk:embulk-util-file:0.1.3"
-    implementation('org.embulk:embulk-util-retryhelper:0.8.1') {
-        exclude group: 'org.slf4j', module: 'slf4j-api'
+    implementation libs.embulk.util.file
+    implementation(libs.embulk.util.retryhelper) {
+        exclude group: "org.slf4j", module: "slf4j-api"
     }
 
-    implementation("com.google.cloud:google-cloud-storage:1.56.0") {
+    implementation(libs.google.cloud.storage) {
         exclude group: "commons-logging", module: "commons-logging"
     }
 
     // Instead of "commons-logging:commons-logging:1.2" that is required from "google-cloud-storage",
     // we use "jcl-over-slf4j" because Embulk is based on SLF4J.
-    implementation("org.slf4j:jcl-over-slf4j:1.7.12") {
+    implementation(libs.jcl.over.slf4j) {
         // slf4j-api is in embulk-core / embulk-api.
         exclude group: "org.slf4j", module: "slf4j-api"
     }
 
-    testImplementation "junit:junit:4.12"
-    testImplementation "org.embulk:embulk-core:0.11.4"
-    testImplementation "org.embulk:embulk-deps:0.11.4"
-    testImplementation "org.embulk:embulk-junit4:0.11.4"
-    testImplementation "org.mockito:mockito-core:2.18.3"
-    testImplementation 'com.google.code.findbugs:annotations:3.0.0'
-    testImplementation "org.embulk:embulk-formatter-csv:0.10.36"
-    testImplementation "org.embulk:embulk-output-file:0.10.36"
-    testImplementation "org.embulk:embulk-parser-csv:0.10.36"
+    testImplementation libs.junit4
+    testImplementation libs.embulk.core
+    testImplementation libs.embulk.deps
+    testImplementation libs.embulk.junit4
+    testImplementation libs.mockito.core
+    testImplementation libs.embulk.formatter.csv
+    testImplementation libs.embulk.output.file
+    testImplementation libs.embulk.parser.csv
 }
 
 embulkPlugin {
