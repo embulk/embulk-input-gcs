@@ -2,36 +2,29 @@ package org.embulk.input.gcs;
 
 import com.google.cloud.ReadChannel;
 import com.google.cloud.storage.Storage;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.channels.Channels;
+import java.util.Iterator;
 import org.embulk.util.file.InputStreamFileInput;
 import org.embulk.util.file.ResumableInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.channels.Channels;
-import java.util.Iterator;
-
-import static java.lang.String.format;
-
-public class SingleFileProvider
-        implements InputStreamFileInput.Provider
-{
+public class SingleFileProvider implements InputStreamFileInput.Provider {
     private final Storage client;
     private final String bucket;
     private final Iterator<String> iterator;
     private boolean opened = false;
 
-    SingleFileProvider(PluginTask task, int taskIndex)
-    {
+    SingleFileProvider(final PluginTask task, final int taskIndex) {
         this.client = AuthUtils.newClient(task);
         this.bucket = task.getBucket();
         this.iterator = task.getFiles().get(taskIndex).iterator();
     }
 
     @Override
-    public InputStreamFileInput.InputStreamWithHints openNextWithHints()
-    {
+    public InputStreamFileInput.InputStreamWithHints openNextWithHints() {
         if (opened) {
             return null;
         }
@@ -48,29 +41,24 @@ public class SingleFileProvider
     }
 
     @Override
-    public void close()
-    {
+    public void close() {
     }
 
-    static class InputStreamReopener
-            implements ResumableInputStream.Reopener
-    {
+    static class InputStreamReopener implements ResumableInputStream.Reopener {
         private Logger logger = LoggerFactory.getLogger(getClass());
         private final Storage client;
         private final String bucket;
         private final String key;
 
-        InputStreamReopener(Storage client, String bucket, String key)
-        {
+        InputStreamReopener(final Storage client, final String bucket, final String key) {
             this.client = client;
             this.bucket = bucket;
             this.key = key;
         }
 
         @Override
-        public InputStream reopen(long offset, Exception closedCause) throws IOException
-        {
-            logger.warn(format("GCS read failed. Retrying GET request with %,d bytes offset", offset), closedCause);
+        public InputStream reopen(final long offset, final Exception closedCause) throws IOException {
+            logger.warn(String.format("GCS read failed. Retrying GET request with %,d bytes offset", offset), closedCause);
             ReadChannel ch = client.get(bucket, key).reader();
             ch.seek(offset);
             return Channels.newInputStream(ch);

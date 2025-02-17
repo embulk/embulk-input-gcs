@@ -223,31 +223,31 @@ gemPush {
 }
 
 test {
-    jvmArgs '-XX:MaxPermSize=128M', '-Xmx2048m'
+    jvmArgs "-XX:MaxPermSize=128M", "-Xmx2048m"
     testLogging {
-        outputs.upToDateWhen { false }
+        events "passed", "skipped", "failed", "standardOut", "standardError"
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
         showCauses = true
         showExceptions = true
         showStackTraces = true
         showStandardStreams = true
-        events "passed", "skipped", "failed", "standardOut", "standardError"
+        outputs.upToDateWhen { false }
+    }
+}
+
+tasks.withType(Checkstyle) {
+    reports {
+        // Not to skip up-to-date checkstyles.
+        outputs.upToDateWhen { false }
     }
 }
 
 checkstyle {
-    configFile = file("${project.rootDir}/config/checkstyle/checkstyle.xml")
-    toolVersion = '6.14.1'
-}
-checkstyleMain {
-    configFile = file("${project.rootDir}/config/checkstyle/default.xml")
+    toolVersion = libs.versions.checkstyle.get()
+    configFile = file("${rootProject.projectDir}/config/checkstyle/checkstyle.xml")
+    configProperties = [
+        "org.checkstyle.google.suppressionfilter.config": file("${rootProject.projectDir}/config/checkstyle/checkstyle-suppressions.xml"),
+    ]
     ignoreFailures = false
-}
-checkstyleTest {
-    configFile = file("${project.rootDir}/config/checkstyle/default.xml")
-    ignoreFailures = false
-}
-task checkstyle(type: Checkstyle) {
-    classpath = sourceSets.main.output + sourceSets.test.output
-    source = sourceSets.main.allJava + sourceSets.test.allJava
+    maxWarnings = 0
 }

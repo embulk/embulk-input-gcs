@@ -1,5 +1,7 @@
 package org.embulk.input.gcs;
 
+import static org.embulk.input.gcs.GcsFileInputPlugin.CONFIG_MAPPER_FACTORY;
+
 import com.google.api.gax.paging.Page;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.Storage;
@@ -14,31 +16,22 @@ import org.embulk.util.file.InputStreamFileInput;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.embulk.input.gcs.GcsFileInputPlugin.CONFIG_MAPPER_FACTORY;
-
-public class GcsFileInput
-        extends InputStreamFileInput
-        implements TransactionalFileInput
-{
+public class GcsFileInput extends InputStreamFileInput implements TransactionalFileInput {
     private static final Logger LOG = LoggerFactory.getLogger(org.embulk.input.gcs.GcsFileInput.class);
 
-    GcsFileInput(PluginTask task, int taskIndex)
-    {
+    GcsFileInput(final PluginTask task, final int taskIndex) {
         super(Exec.getBufferAllocator(), new SingleFileProvider(task, taskIndex));
     }
 
-    public void abort()
-    {
+    public void abort() {
     }
 
-    public TaskReport commit()
-    {
+    public TaskReport commit() {
         return CONFIG_MAPPER_FACTORY.newTaskReport();
     }
 
     @Override
-    public void close()
-    {
+    public void close() {
     }
 
     /**
@@ -46,8 +39,7 @@ public class GcsFileInput
      *
      * The resulting list does not include the file that's size == 0.
      */
-    static FileList listFiles(PluginTask task)
-    {
+    static FileList listFiles(final PluginTask task) {
         Storage client = AuthUtils.newClient(task);
         String bucket = task.getBucket();
 
@@ -70,8 +62,7 @@ public class GcsFileInput
                 LOG.debug("filename: {}", blob.getName());
                 LOG.debug("updated: {}", blob.getUpdateTime());
             }
-        }
-        catch (RuntimeException e) {
+        } catch (final RuntimeException e) {
             if ((e instanceof StorageException) && ((StorageException) e).getCode() == 400) {
                 throw new ConfigException(String.format("Files listing failed: bucket:%s, prefix:%s, last_path:%s", bucket, prefix, lastKey), e);
             }
@@ -83,8 +74,7 @@ public class GcsFileInput
     }
 
     // String nextToken = base64Encode(0x0a + ASCII character according to utf8EncodeLength position+ filePath);
-    static String base64Encode(String path)
-    {
+    static String base64Encode(final String path) {
         byte[] encoding;
         byte[] utf8 = path.getBytes(StandardCharsets.UTF_8);
         LOG.debug("path string: {} ,path length:{} \" + ", path, utf8.length);
@@ -107,8 +97,7 @@ public class GcsFileInput
         return s;
     }
 
-    private static void printBucketInfo(Storage client, String bucket)
-    {
+    private static void printBucketInfo(final Storage client, final String bucket) {
         // get Bucket
         Storage.BucketGetOption fields = Storage.BucketGetOption.fields(
                 Storage.BucketField.LOCATION,

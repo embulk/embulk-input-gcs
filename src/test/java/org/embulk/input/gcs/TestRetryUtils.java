@@ -1,5 +1,13 @@
 package org.embulk.input.gcs;
 
+import static org.embulk.input.gcs.GcsFileInputPlugin.CONFIG_MAPPER;
+import static org.embulk.input.gcs.GcsFileInputPlugin.CONFIG_MAPPER_FACTORY;
+import static org.embulk.input.gcs.RetryUtils.withRetry;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
 import com.google.api.client.auth.oauth2.TokenResponseException;
 import com.google.api.client.googleapis.json.GoogleJsonError;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
@@ -15,45 +23,31 @@ import com.google.api.client.testing.http.MockHttpTransport;
 import com.google.api.client.testing.http.MockLowLevelHttpRequest;
 import com.google.api.client.testing.http.MockLowLevelHttpResponse;
 import com.google.cloud.storage.StorageException;
+import java.io.IOException;
 import org.embulk.test.EmbulkTestRuntime;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import java.io.IOException;
-
-import static org.embulk.input.gcs.GcsFileInputPlugin.CONFIG_MAPPER;
-import static org.embulk.input.gcs.GcsFileInputPlugin.CONFIG_MAPPER_FACTORY;
-import static org.embulk.input.gcs.RetryUtils.withRetry;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
-public class TestRetryUtils
-{
+public class TestRetryUtils {
     @Rule
     public EmbulkTestRuntime runtime = new EmbulkTestRuntime();
 
     private RetryUtils.DefaultRetryable<Object> mock;
 
     @Before
-    public void setUp()
-    {
-        mock = new RetryUtils.DefaultRetryable<Object>()
-        {
+    public void setUp() {
+        mock = new RetryUtils.DefaultRetryable<Object>() {
             @Override
-            public Object call()
-            {
+            public Object call() {
                 return null;
             }
         };
     }
 
     @Test
-    public void testRetryable() throws IOException
-    {
+    public void testRetryable() throws IOException {
         // verify that #isRetryable() returns false for below cases:
         // - GoogleJsonResponseException && details.code == 4xx
         assertFalse(mock.isRetryableException(fakeJsonException(400, "fake_400_ex", null)));
@@ -73,8 +67,7 @@ public class TestRetryUtils
     }
 
     @Test
-    public void testWithRetry() throws Exception
-    {
+    public void testWithRetry() throws Exception {
         mock = Mockito.spy(mock);
         Exception ex = new StorageException(403, "Fake Exception");
         Mockito.doThrow(ex).doThrow(ex).doReturn(null).when(mock).call();
@@ -85,21 +78,17 @@ public class TestRetryUtils
     }
 
     @Test
-    public void testWithRetryGiveUp()
-    {
+    public void testWithRetryGiveUp() {
         final String expectMsg = "Will retry and give up";
-        mock = new RetryUtils.DefaultRetryable<Object>()
-        {
+        mock = new RetryUtils.DefaultRetryable<Object>() {
             @Override
-            public Object call()
-            {
+            public Object call() {
                 throw new IllegalStateException(expectMsg);
             }
         };
         try {
             withRetry(params(), mock);
-        }
-        catch (RuntimeException e) {
+        } catch (final RuntimeException e) {
             // root cause -> RetryGiveUpException -> RuntimeException
             Throwable rootCause = e.getCause().getCause();
             assertEquals(expectMsg, rootCause.getMessage());
@@ -107,43 +96,36 @@ public class TestRetryUtils
         }
     }
 
-    private static RetryUtils.Task params()
-    {
+    private static RetryUtils.Task params() {
         return CONFIG_MAPPER.map(CONFIG_MAPPER_FACTORY.newConfigSource().set("initial_retry_interval_millis", 1), RetryUtils.Task.class);
     }
 
-    private static GoogleJsonResponseException fakeJsonException(final int code, final String message, final String content)
-    {
+    private static GoogleJsonResponseException fakeJsonException(final int code, final String message, final String content) {
         GoogleJsonResponseException.Builder builder = new GoogleJsonResponseException.Builder(code, message, new HttpHeaders());
         builder.setContent(content);
         return new GoogleJsonResponseException(builder, fakeJsonError(code, message));
     }
 
-    private static GoogleJsonResponseException fakeJsonExceptionWithoutDetails(final int code, final String message, final String content)
-    {
+    private static GoogleJsonResponseException fakeJsonExceptionWithoutDetails(final int code, final String message, final String content) {
         GoogleJsonResponseException.Builder builder = new GoogleJsonResponseException.Builder(code, message, new HttpHeaders());
         builder.setContent(content);
         return new GoogleJsonResponseException(builder, null);
     }
 
-    private static GoogleJsonError fakeJsonError(final int code, final String message)
-    {
+    private static GoogleJsonError fakeJsonError(final int code, final String message) {
         GoogleJsonError error = new GoogleJsonError();
         error.setCode(code);
         error.setMessage(message);
         return error;
     }
 
-    private static TokenResponseException fakeTokenException(final int code, final String content) throws IOException
-    {
+    private static TokenResponseException fakeTokenException(final int code, final String content) throws IOException {
         HttpTransport transport = new MockHttpTransport() {
             @Override
-            public LowLevelHttpRequest buildRequest(String method, String url)
-            {
+            public LowLevelHttpRequest buildRequest(final String method, final String url) {
                 return new MockLowLevelHttpRequest() {
                     @Override
-                    public LowLevelHttpResponse execute()
-                    {
+                    public LowLevelHttpResponse execute() {
                         MockLowLevelHttpResponse response = new MockLowLevelHttpResponse();
                         response.addHeader("custom_header", "value");
                         response.setStatusCode(code);
