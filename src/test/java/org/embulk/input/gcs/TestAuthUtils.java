@@ -2,9 +2,9 @@ package org.embulk.input.gcs;
 
 import com.google.auth.Credentials;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import org.embulk.EmbulkTestRuntime;
 import org.embulk.config.ConfigException;
 import org.embulk.config.ConfigSource;
+import org.embulk.test.EmbulkTestRuntime;
 import org.embulk.util.config.units.LocalFile;
 import org.junit.Before;
 import org.junit.BeforeClass;

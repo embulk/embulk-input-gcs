@@ -7,7 +7,7 @@ import com.google.cloud.storage.Storage;
 import com.google.common.base.Charsets;
 import com.google.common.io.Files;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import org.embulk.EmbulkTestRuntime;
+import org.embulk.test.EmbulkTestRuntime;
 import org.embulk.util.file.ResumableInputStream;
 import org.junit.Rule;
 import org.junit.Test;
