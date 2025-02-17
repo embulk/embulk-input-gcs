@@ -13,7 +13,7 @@ embulk-util-retryhelper = "0.8.1"
 
 google-cloud-storage = "1.56.0"
 
-jcl-over-slf4j = "1.7.12"
+jcl-over-slf4j = "2.0.7"
 
 junit4 = "4.12"
 mockito = "2.18.3"
