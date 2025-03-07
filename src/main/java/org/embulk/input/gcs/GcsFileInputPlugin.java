@@ -17,6 +17,7 @@
 package org.embulk.input.gcs;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 import org.embulk.config.ConfigDiff;
@@ -64,10 +65,10 @@ public class GcsFileInputPlugin implements FileInputPlugin {
             }
         }
 
-        // @see https://cloud.google.com/storage/docs/bucket-naming
+        // @see https://cloud.google.com/storage/docs/objects#naming
         if (task.getLastPath().isPresent()) {
-            if (task.getLastPath().get().length() >= 128) {
-                throw new ConfigException("last_path length is allowed up to 127 characters");
+            if (task.getLastPath().get().getBytes(StandardCharsets.UTF_8).length >= 1025) {
+                throw new ConfigException("last_path length is allowed up to 1024 bytes.");
             }
         }
 

@@ -91,26 +91,48 @@ public class GcsFileInput extends InputStreamFileInput implements TransactionalF
 
     // String nextToken = base64Encode(0x0a + ASCII character according to utf8EncodeLength position+ filePath);
     static String base64Encode(final String path) {
+        byte[] lengthVarint;
         byte[] encoding;
         byte[] utf8 = path.getBytes(StandardCharsets.UTF_8);
         LOG.debug("path string: {} ,path length:{} \" + ", path, utf8.length);
 
         int utf8EncodeLength = utf8.length;
-        if (utf8EncodeLength >= 128) {
+        if (utf8EncodeLength >= 65_535) {
             throw new ConfigException(String.format("last_path '%s' is too long to encode. Please try to reduce its length", path));
         }
 
-        encoding = new byte[utf8.length + 2];
+        lengthVarint = encodeVarint(utf8EncodeLength);
+        encoding = new byte[1 + lengthVarint.length + utf8.length];
         encoding[0] = 0x0a;
 
-        // for example: 60 -> '<'
-        char temp = (char) utf8EncodeLength;
-        encoding[1] = (byte) temp;
-        System.arraycopy(utf8, 0, encoding, 2, utf8.length);
+        System.arraycopy(lengthVarint, 0, encoding, 1, lengthVarint.length);
+        System.arraycopy(utf8, 0, encoding, 1 + lengthVarint.length, utf8.length);
 
         final String s = Base64.getEncoder().encodeToString(encoding);
         LOG.debug("last_path(base64 encoded): {}", s);
         return s;
+    }
+
+    // see: https://protobuf.dev/programming-guides/encoding/#varints
+    private static byte[] encodeVarint(int value)
+    {
+        // utf8EncodeLength.length is up to 65535, so 2 bytes are enough for buffer
+        byte[] buffer = new byte[2];
+        int pos = 0;
+        while (true) {
+            int bits = value & 0x7F;
+            value >>>= 7;
+            if (value != 0) {
+                buffer[pos++] = (byte) (bits | 0x80);
+            }
+            else {
+                buffer[pos++] = (byte) bits;
+                break;
+            }
+        }
+        byte[] result = new byte[pos];
+        System.arraycopy(buffer, 0, result, 0, pos);
+        return result;
     }
 
     private static void printBucketInfo(final Storage client, final String bucket) {
