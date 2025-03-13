@@ -97,8 +97,10 @@ public class GcsFileInput extends InputStreamFileInput implements TransactionalF
         LOG.debug("path string: {} ,path length:{} \" + ", path, utf8.length);
 
         int utf8EncodeLength = utf8.length;
-        if (utf8EncodeLength >= 65_535) {
-            throw new ConfigException(String.format("last_path '%s' is too long to encode. Please try to reduce its length", path));
+        // GCP object names can be up to 1024 bytes in length.
+        // This limit aligns with task.getLastPath() expectations.
+        if (utf8EncodeLength >= 1025) {
+            throw new ConfigException(String.format("last_path '%s' is too long to encode. Maximum allowed is 1024 bytes", path));
         }
 
         lengthVarint = encodeVarint(utf8EncodeLength);
