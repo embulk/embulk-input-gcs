@@ -91,8 +91,6 @@ public class GcsFileInput extends InputStreamFileInput implements TransactionalF
 
     // String nextToken = base64Encode(0x0a + ASCII character according to utf8EncodeLength position+ filePath);
     static String base64Encode(final String path) {
-        byte[] lengthVarint;
-        byte[] encoding;
         byte[] utf8 = path.getBytes(StandardCharsets.UTF_8);
         LOG.debug("path string: {} ,path length:{} \" + ", path, utf8.length);
 
@@ -103,6 +101,8 @@ public class GcsFileInput extends InputStreamFileInput implements TransactionalF
             throw new ConfigException(String.format("last_path '%s' is too long to encode. Maximum allowed is 1024 bytes", path));
         }
 
+        byte[] lengthVarint;
+        byte[] encoding;
         lengthVarint = encodeVarint(utf8EncodeLength);
         encoding = new byte[1 + lengthVarint.length + utf8.length];
         encoding[0] = 0x0a;
@@ -116,8 +116,7 @@ public class GcsFileInput extends InputStreamFileInput implements TransactionalF
     }
 
     // see: https://protobuf.dev/programming-guides/encoding/#varints
-    private static byte[] encodeVarint(int value)
-    {
+    private static byte[] encodeVarint(int value) {
         // utf8EncodeLength.length is up to 65535, so 2 bytes are enough for buffer
         byte[] buffer = new byte[2];
         int pos = 0;
@@ -126,8 +125,7 @@ public class GcsFileInput extends InputStreamFileInput implements TransactionalF
             value >>>= 7;
             if (value != 0) {
                 buffer[pos++] = (byte) (bits | 0x80);
-            }
-            else {
+            } else {
                 buffer[pos++] = (byte) bits;
                 break;
             }

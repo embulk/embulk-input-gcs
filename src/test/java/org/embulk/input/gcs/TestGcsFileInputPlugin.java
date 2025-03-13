@@ -406,8 +406,7 @@ public class TestGcsFileInputPlugin {
     }
 
     @Test
-    public void testEncodeVarint() throws Exception
-    {
+    public void testEncodeVarint() throws Exception {
         Method encodeVarintMethod = GcsFileInput.class.getDeclaredMethod("encodeVarint", int.class);
         encodeVarintMethod.setAccessible(true);
 
