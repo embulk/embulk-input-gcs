@@ -18,6 +18,7 @@ package org.embulk.input.gcs;
 
 import static org.embulk.input.gcs.GcsFileInputPlugin.CONFIG_MAPPER;
 import static org.embulk.input.gcs.GcsFileInputPlugin.CONFIG_MAPPER_FACTORY;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeNotNull;
@@ -30,6 +31,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.reflect.Method;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -401,6 +403,29 @@ public class TestGcsFileInputPlugin {
         params = "テストダミー/テス123/テストダミー/テストダミ.csv";
         expected = "CkPjg4bjgrnjg4jjg4Djg5/jg7wv44OG44K5MTIzL+ODhuOCueODiOODgOODn+ODvC/jg4bjgrnjg4jjg4Djg58uY3N2";
         assertEquals(expected, GcsFileInput.base64Encode(params));
+    }
+
+    @Test
+    public void testEncodeVarint() throws Exception
+    {
+        Method encodeVarintMethod = GcsFileInput.class.getDeclaredMethod("encodeVarint", int.class);
+        encodeVarintMethod.setAccessible(true);
+
+        byte[] expected1 = new byte[]{0x01};
+        byte[] result1 = (byte[]) encodeVarintMethod.invoke(null, 1);
+        assertArrayEquals("encodeVarint(1) should return {0x01}", expected1, result1);
+
+        byte[] expected127 = new byte[]{0x7F};
+        byte[] result127 = (byte[]) encodeVarintMethod.invoke(null, 127);
+        assertArrayEquals("encodeVarint(127) should return {0x7F}", expected127, result127);
+
+        byte[] expected128 = new byte[]{(byte) 0x80, 0x01};
+        byte[] result128 = (byte[]) encodeVarintMethod.invoke(null, 128);
+        assertArrayEquals("encodeVarint(128) should return {0x80, 0x01}", expected128, result128);
+
+        byte[] expected1024 = new byte[]{(byte) 0x80, 0x08};
+        byte[] result1024 = (byte[]) encodeVarintMethod.invoke(null, 1024);
+        assertArrayEquals("encodeVarint(1024) should return {0x80, 0x08}", expected1024, result1024);
     }
 
     private ConfigSource config() {
