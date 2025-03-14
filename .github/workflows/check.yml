@@ -1,8 +1,19 @@
 name: Check
-on: [ pull_request, push ]
+on:
+- push
+# The "pull_request_target" event allows a pull request from an external fork to run the Workflow with Secrets.
+# It can be vulnerable as a modified Workflow in a malicious pull request can run with Secrets.
+# See: https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/
+#
+# Confirm this repo is configured to "Require approval for all external contributors" in Settings of the repo,
+# and inspect any external pull request before approving the Workflow to run for the external pull request.
+- pull_request_target
 jobs:
   check:
     runs-on: ${{ matrix.os }}
+    permissions:  # The "pull_request_target" event also permits "write" by default, but it should be disabled.
+      contents: read
+      actions: read
     # push: always run.
     # pull_request: run only when the PR is submitted from a forked repository, not within this repository.
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
@@ -22,12 +33,11 @@ jobs:
       with:
         java-version: 8
         distribution: "temurin"
-        cache: "gradle"
     - name: Check
       env:
-        GCP_EMAIL: ${{secrets.GCP_EMAIL}}
-        GCP_JSON_KEYFILE: ${{secrets.GCP_JSON_KEYFILE}}
-        GCP_PRIVATE_KEYFILE: ${{secrets.GCP_PRIVATE_KEYFILE}}
-        GCP_BUCKET: ${{secrets.GCP_BUCKET}}
-        GCP_BUCKET_DIRECTORY: ${{secrets.GCP_BUCKET_DIRECTORY}}
+        GCP_EMAIL: ${{ secrets.GCP_EMAIL }}
+        GCP_JSON_KEYFILE: ${{ secrets.GCP_JSON_KEYFILE }}
+        GCP_PRIVATE_KEYFILE: ${{ secrets.GCP_PRIVATE_KEYFILE }}
+        GCP_BUCKET: ${{ secrets.GCP_BUCKET }}
+        GCP_BUCKET_DIRECTORY: ${{ secrets.GCP_BUCKET_DIRECTORY }}
       run: ./gradlew --stacktrace check
