@@ -68,7 +68,7 @@ public class GcsFileInputPlugin implements FileInputPlugin {
         // @see https://cloud.google.com/storage/docs/objects#naming
         if (task.getLastPath().isPresent()) {
             if (task.getLastPath().get().getBytes(StandardCharsets.UTF_8).length >= 1025) {
-                throw new ConfigException("last_path length is allowed up to 1024 bytes.");
+                throw new ConfigException("last_path is too long, which can contain a maximum of 1024 bytes encoded in UTF-8.");
             }
         }
 
