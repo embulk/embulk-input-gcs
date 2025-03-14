@@ -116,7 +116,7 @@ public class GcsFileInput extends InputStreamFileInput implements TransactionalF
     }
 
     // see: https://protobuf.dev/programming-guides/encoding/#varints
-    private static byte[] encodeVarint(int value) {
+    static byte[] encodeVarint(int value) {
         // utf8EncodeLength.length is up to 65535, so 2 bytes are enough for buffer
         byte[] buffer = new byte[2];
         int pos = 0;

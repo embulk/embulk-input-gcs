@@ -31,7 +31,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.lang.reflect.Method;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -406,24 +405,21 @@ public class TestGcsFileInputPlugin {
     }
 
     @Test
-    public void testEncodeVarint() throws Exception {
-        Method encodeVarintMethod = GcsFileInput.class.getDeclaredMethod("encodeVarint", int.class);
-        encodeVarintMethod.setAccessible(true);
-
+    public void testEncodeVarint() {
         byte[] expected1 = new byte[]{0x01};
-        byte[] result1 = (byte[]) encodeVarintMethod.invoke(null, 1);
+        byte[] result1 = GcsFileInput.encodeVarint(1);
         assertArrayEquals("encodeVarint(1) should return {0x01}", expected1, result1);
 
         byte[] expected127 = new byte[]{0x7F};
-        byte[] result127 = (byte[]) encodeVarintMethod.invoke(null, 127);
+        byte[] result127 = GcsFileInput.encodeVarint(127);
         assertArrayEquals("encodeVarint(127) should return {0x7F}", expected127, result127);
 
         byte[] expected128 = new byte[]{(byte) 0x80, 0x01};
-        byte[] result128 = (byte[]) encodeVarintMethod.invoke(null, 128);
+        byte[] result128 = GcsFileInput.encodeVarint(128);
         assertArrayEquals("encodeVarint(128) should return {0x80, 0x01}", expected128, result128);
 
         byte[] expected1024 = new byte[]{(byte) 0x80, 0x08};
-        byte[] result1024 = (byte[]) encodeVarintMethod.invoke(null, 1024);
+        byte[] result1024 = GcsFileInput.encodeVarint(1024);
         assertArrayEquals("encodeVarint(1024) should return {0x80, 0x08}", expected1024, result1024);
     }
 
