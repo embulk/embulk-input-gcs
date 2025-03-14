@@ -18,6 +18,7 @@ package org.embulk.input.gcs;
 
 import static org.embulk.input.gcs.GcsFileInputPlugin.CONFIG_MAPPER;
 import static org.embulk.input.gcs.GcsFileInputPlugin.CONFIG_MAPPER_FACTORY;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeNotNull;
@@ -394,13 +395,32 @@ public class TestGcsFileInputPlugin {
         assertEquals("CgJjMg==", GcsFileInput.base64Encode("c2"));
         assertEquals("Cgh0ZXN0LmNzdg==", GcsFileInput.base64Encode("test.csv"));
         assertEquals("ChZnY3MtdGVzdC9zYW1wbGVfMDEuY3N2", GcsFileInput.base64Encode("gcs-test/sample_01.csv"));
-        String params = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc127";
-        String expected = "Cn9jY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjMTI3";
+        String params = "ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc200";
+        String expected = "CsgBY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2MyMDA=";
         assertEquals(expected, GcsFileInput.base64Encode(params));
 
         params = "テストダミー/テス123/テストダミー/テストダミ.csv";
         expected = "CkPjg4bjgrnjg4jjg4Djg5/jg7wv44OG44K5MTIzL+ODhuOCueODiOODgOODn+ODvC/jg4bjgrnjg4jjg4Djg58uY3N2";
         assertEquals(expected, GcsFileInput.base64Encode(params));
+    }
+
+    @Test
+    public void testEncodeVarint() {
+        byte[] expected1 = new byte[]{0x01};
+        byte[] result1 = GcsFileInput.encodeVarint(1);
+        assertArrayEquals("encodeVarint(1) should return {0x01}", expected1, result1);
+
+        byte[] expected127 = new byte[]{0x7F};
+        byte[] result127 = GcsFileInput.encodeVarint(127);
+        assertArrayEquals("encodeVarint(127) should return {0x7F}", expected127, result127);
+
+        byte[] expected128 = new byte[]{(byte) 0x80, 0x01};
+        byte[] result128 = GcsFileInput.encodeVarint(128);
+        assertArrayEquals("encodeVarint(128) should return {0x80, 0x01}", expected128, result128);
+
+        byte[] expected1024 = new byte[]{(byte) 0x80, 0x08};
+        byte[] result1024 = GcsFileInput.encodeVarint(1024);
+        assertArrayEquals("encodeVarint(1024) should return {0x80, 0x08}", expected1024, result1024);
     }
 
     private ConfigSource config() {
